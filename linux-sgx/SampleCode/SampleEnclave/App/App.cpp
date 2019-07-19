@@ -177,6 +177,9 @@ void ocall_print_string(const char *str)
 }
 
 
+extern "C" sgx_status_t trts_mprotect(size_t start, size_t size, uint64_t perms);
+extern uint8_t __ImageBase;
+
 /* Application entry */
 int SGX_CDECL main(int argc, char *argv[])
 {
@@ -201,6 +204,8 @@ int SGX_CDECL main(int argc, char *argv[])
     ecall_libc_functions();
     ecall_libcxx_functions();
     ecall_thread_functions();
+    
+    ecall_test_mprotect(global_eid);
 
     /* Destroy the enclave */
     sgx_destroy_enclave(global_eid);

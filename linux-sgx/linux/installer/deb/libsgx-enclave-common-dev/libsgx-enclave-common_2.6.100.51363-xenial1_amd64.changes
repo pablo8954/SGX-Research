@@ -1,0 +1,38 @@
+Format: 1.8
+Date: Tue, 09 May 2018 11:47:23 +0300
+Source: libsgx-enclave-common
+Binary: libsgx-enclave-common-dev
+Architecture: source amd64
+Version: 2.6.100.51363-xenial1
+Distribution: unstable
+Urgency: low
+Maintainer: <xiangquan.liu@intel.com>
+Changed-By: Xiangquan Liu <xiangquan.liu@intel.com>
+Description:
+ libsgx-enclave-common-dev - SGX Enclave Common Loader For Developers
+Changes:
+ libsgx-enclave-common (2.6.100.51363-xenial1) unstable; urgency=low
+ .
+   * Added support for Ubuntu* 18.04 LTS 64-bit Desktop and Server version
+   * Updated the Intel® SGX PSW installer for Ubuntu*. The following changes are introduced:
+     + Using .deb installer
+     + Using name libsgx-enclave-common_{version string}-1_amd64.deb
+     + Installing the Intel® SGX Enclave Common loader library
+   * Fixed SGX Quoting enclave bug, which caused the invalid signature error when a user upgraded the SGX PSW 1.6 version to a higher version and did remote attestation
+   * Updated the SGX Provisioning Cert Enclave to fix error code bug
+   * Fixed bugs
+Checksums-Sha1:
+ 9e01adcb5a597a3f51e1aee2a3565b7f4aa882e8 1048 libsgx-enclave-common_2.6.100.51363-xenial1.dsc
+ 127a652ec8d48cdb74667998788159f616a0ffc0 25999 libsgx-enclave-common_2.6.100.51363.orig.tar.gz
+ 2cf4b37a6621c4021870b47a9890b70cd3388bf6 21532 libsgx-enclave-common_2.6.100.51363-xenial1.debian.tar.xz
+ 8e1b396edb7bdf208e891c1b63bbcf4d2e813f41 24884 libsgx-enclave-common-dev_2.6.100.51363-xenial1_amd64.deb
+Checksums-Sha256:
+ fcd0fa7e4bfaa45dcd786984bf25f33ef3560762db3257321244767478cc999e 1048 libsgx-enclave-common_2.6.100.51363-xenial1.dsc
+ f9a9414e0fd48778e4249bd689eae3b2057d6896dc6967a6b303bfba28fed2a7 25999 libsgx-enclave-common_2.6.100.51363.orig.tar.gz
+ c78c901a790d27acf779bbf65b006fb955d37f6cd03eb4b35ab6c1c2f8f47532 21532 libsgx-enclave-common_2.6.100.51363-xenial1.debian.tar.xz
+ 7749e9aa61d1408f23a9260e3bf04c5db383b4aa338d8b4b9ecbe6871dfb168a 24884 libsgx-enclave-common-dev_2.6.100.51363-xenial1_amd64.deb
+Files:
+ a6351cb773399bfc9637bbb74c46419e 1048 libs optional libsgx-enclave-common_2.6.100.51363-xenial1.dsc
+ ad20f00417a22d6ce47f6bef1e1601d1 25999 libs optional libsgx-enclave-common_2.6.100.51363.orig.tar.gz
+ 21d2e2e9f68c2266add83480d9dc7ee6 21532 libs optional libsgx-enclave-common_2.6.100.51363-xenial1.debian.tar.xz
+ 60c7c0ef033e1ce6ec381b4c6a6b5b05 24884 libs optional libsgx-enclave-common-dev_2.6.100.51363-xenial1_amd64.deb

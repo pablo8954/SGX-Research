@@ -33,9 +33,11 @@
 #include <string.h>
 #include "sgx_cpuid.h"
 
+
 #include "sgx_trts.h"
 #include "../Enclave.h"
 #include "Enclave_t.h"
+
 
 /* ecall_malloc_free:
  *   Uses malloc/free to allocate/free trusted memory.
@@ -57,3 +59,23 @@ void ecall_sgx_cpuid(int cpuinfo[4], int leaf)
     if (ret != SGX_SUCCESS)
         abort();
 }
+
+extern "C" sgx_status_t trts_mprotect(size_t start, size_t size, uint64_t perms);
+extern uint8_t __ImageBase;
+
+void ecall_test_mprotect(void)
+{
+    size_t start = (size_t) malloc(4096 + 4096);
+    //align start to page (align up)
+    start = (start + 4096 - 1) &~(4096 - 1);
+    start + 0xfff & 0xffff000;
+    size_t size = 4096;
+
+    printf("start = %lx\n size = %lx\n", start, size);
+
+    trts_mprotect(start,size, 0x7);
+    trts_mprotect(start,size, 0x4);
+
+    printf("trts_mprotect function working");
+}
+
