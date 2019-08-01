@@ -57,3 +57,40 @@ void ecall_sgx_cpuid(int cpuinfo[4], int leaf)
     if (ret != SGX_SUCCESS)
         abort();
 }
+
+extern "C" sgx_status_t trts_mprotect(size_t start, size_t size, uint64_t perms);
+extern uint8_t __ImageBase;
+
+void ecall_test_mprotect(void)
+{
+    //allocate pages
+    size_t start = (size_t) malloc(4096 + 4096);
+    start = (start + 4096 - 1) & ~(4096 - 1);
+    size_t size  = 4096; // One page (4KB)
+
+    memset((void *) start, 0, size);
+    
+    unsigned long start_time, end_time;
+    unsigned long average_time = 0.0;
+    int trials = 10000;
+
+    for (int i = 0; i < trials; i++)
+    {
+        ocall_gettime(&start_time);
+        // trts_mprotect(start, size, 0x4);
+        trts_mprotect(start, size, 0x7);
+        ocall_gettime(&end_time);
+
+        if ((end_time - start_time) < 0)
+        {
+            average_time += 1000000000 + end_time - start_time;
+        }
+
+        else 
+        {
+            average_time += end_time - start_time;
+        }   
+    }
+
+    printf("\nAverage trts_mprotect time: %lu ns \n", average_time/trials);
+}

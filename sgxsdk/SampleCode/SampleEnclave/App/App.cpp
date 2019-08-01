@@ -33,6 +33,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
+#include <time.h>
 
 # include <unistd.h>
 # include <pwd.h>
@@ -191,16 +192,40 @@ int SGX_CDECL main(int argc, char *argv[])
         return -1; 
     }
  
-    /* Utilize edger8r attributes */
-    edger8r_array_attributes();
-    edger8r_pointer_attributes();
-    edger8r_type_attributes();
-    edger8r_function_attributes();
+    // /* Utilize edger8r attributes */
+    // edger8r_array_attributes();
+    // edger8r_pointer_attributes();
+    // edger8r_type_attributes();
+    // edger8r_function_attributes();
     
-    /* Utilize trusted libraries */
-    ecall_libc_functions();
-    ecall_libcxx_functions();
-    ecall_thread_functions();
+    // /* Utilize trusted libraries */
+    // ecall_libc_functions();
+    // ecall_libcxx_functions();
+    // ecall_thread_functions();
+
+    ecall_test_mprotect(global_eid);
+
+    timespec start, end;
+    int trials = 10000;
+    unsigned long average_time = 0.0;
+    for (int i = 0; i < trials; i++)
+    {
+        clock_gettime(CLOCK_REALTIME, &start);
+        ocall_nothing();
+        clock_gettime(CLOCK_REALTIME, &end);
+
+        if ((end.tv_nsec - start.tv_nsec) < 0)
+        {
+            average_time += 1000000000 + end.tv_nsec - start.tv_nsec;
+        }
+
+        else 
+        {
+            average_time += end.tv_nsec - start.tv_nsec; 
+        }
+    }
+    
+    printf("Ocall overhead: %lu ns\n\n", average_time/trials);
 
     /* Destroy the enclave */
     sgx_destroy_enclave(global_eid);
@@ -212,3 +237,11 @@ int SGX_CDECL main(int argc, char *argv[])
     return 0;
 }
 
+void ocall_nothing(void) {}
+
+unsigned long ocall_gettime(void)
+{
+    timespec time;
+    clock_gettime(CLOCK_REALTIME, &time);
+    return time.tv_nsec;
+}
