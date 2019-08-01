@@ -71,26 +71,52 @@ void ecall_test_mprotect(void)
     memset((void *) start, 0, size);
     
     unsigned long start_time, end_time;
-    unsigned long average_time = 0.0;
+    unsigned long average_time_mprotect = 0.0;
+    unsigned long average_time_ocall = 0.0;
     int trials = 10000;
 
     for (int i = 0; i < trials; i++)
     {
+        //get mprotect timings
         ocall_gettime(&start_time);
-        // trts_mprotect(start, size, 0x4);
-        trts_mprotect(start, size, 0x7);
+        trts_mprotect(start, size, 0x4);
+        // trts_mprotect(start, size, 0x7);
         ocall_gettime(&end_time);
 
+        
         if ((end_time - start_time) < 0)
         {
-            average_time += 1000000000 + end_time - start_time;
+            average_time_mprotect += 1000000000 + end_time - start_time;
         }
 
         else 
         {
-            average_time += end_time - start_time;
+            average_time_mprotect += end_time - start_time;
         }   
     }
 
-    printf("\nAverage trts_mprotect time: %lu ns \n", average_time/trials);
+    //get ocall overhead timings
+    for (int i = 0; i < trials; i++)
+    {
+        ocall_gettime(&start_time);
+        ocall_nothing();
+        ocall_gettime(&end_time);
+
+        if ((end_time - start_time) < 0)
+        {
+            average_time_ocall += 1000000000 + end_time - start_time;
+        }
+
+        else 
+        {
+            average_time_ocall += end_time - start_time;
+        }   
+    }
+
+    unsigned long mprotect_time = average_time_mprotect/trials;
+    unsigned long ocall_time = average_time_ocall/trials;
+
+    printf("\nAverage trts_mprotect time: %lu ns \n", mprotect_time);
+    printf("Average ocall time: %lu ns\n", ocall_time);
+    printf("mprotect time without ocall: %lu ns\n\n", mprotect_time - ocall_time);
 }
