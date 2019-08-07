@@ -75,6 +75,7 @@ void ecall_test_mprotect(void)
     unsigned long average_time_ocall = 0.0;
     int trials = 10000;
 
+    /* Time mprotect and overhead */
     for (int i = 0; i < trials; i++)
     {
         //get mprotect timings
@@ -82,7 +83,6 @@ void ecall_test_mprotect(void)
         trts_mprotect(start, size, 0x4);
         // trts_mprotect(start, size, 0x7);
         ocall_gettime(&end_time);
-
         
         if ((end_time - start_time) < 0)
         {

@@ -192,6 +192,7 @@ int SGX_CDECL main(int argc, char *argv[])
         return -1; 
     }
 
+    //call enclave function to time mprotect & ocall overhead
     ecall_test_mprotect(global_eid);
 
     /* Destroy the enclave */
@@ -206,6 +207,7 @@ int SGX_CDECL main(int argc, char *argv[])
 
 void ocall_nothing(void) {}
 
+//retrieves time for timing mprotect & ocall functions
 unsigned long ocall_gettime(void)
 {
     timespec time;
