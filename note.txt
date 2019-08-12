@@ -1,0 +1,16 @@
+Implemented:
+
+1. In SGX Driver: new ioctl SGX_IOC_ENCLAVE_EAUG
+	-> Call sgx_ioc_page_uag()
+	-> alloc_rage()
+	-> sgx_encl_augment() on every page
+
+2. In SGX SDK (trts, i.e., inside enclave)
+	trts_mmap(size_t start, size_t size)
+	-> allocate_pages_ocall() (in sdk/trts/trts_emodpr.cpp)
+	-> sgx_ocall(EDMM_AUG, ms)
+	-> Exit enclave
+	-> CEnclave::ocall() (in psw/urts/enclave.cpp)
+	-> CEnclave::ocal_eaug() (in psw/urts/linux/urts_emodpr.cpp)
+	-> EnclaveCreatorHW::eaug() (in psw/urts/linux/enclave_creator_hw.cpp)
+	-> ioctl() -> go to SGX Driver
