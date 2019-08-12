@@ -1,4 +1,0 @@
-ShrinkableVector
-----------------
-
-.. doxygenclass:: cppmicroservices::ShrinkableVector

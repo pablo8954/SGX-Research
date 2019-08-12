@@ -1,4 +1,0 @@
-ServiceEventListenerHook
-------------------------
-
-.. doxygenstruct:: cppmicroservices::ServiceEventListenerHook

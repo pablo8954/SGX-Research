@@ -1,4 +1,0 @@
-BundleContext
--------------
-
-.. doxygenclass:: cppmicroservices::BundleContext

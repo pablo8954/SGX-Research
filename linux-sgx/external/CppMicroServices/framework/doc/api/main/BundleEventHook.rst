@@ -1,4 +1,0 @@
-BundleEventHook
----------------
-
-.. doxygenstruct:: cppmicroservices::BundleEventHook

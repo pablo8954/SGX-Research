@@ -1,4 +1,0 @@
-ServiceFindHook
----------------
-
-.. doxygenstruct:: cppmicroservices::ServiceFindHook

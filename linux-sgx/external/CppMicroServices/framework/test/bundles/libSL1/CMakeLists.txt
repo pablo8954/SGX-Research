@@ -1,2 +1,0 @@
-
-usFunctionCreateTestBundleWithResources(TestBundleSL1 SOURCES ActivatorSL1.cpp RESOURCES manifest.json)

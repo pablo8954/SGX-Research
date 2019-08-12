@@ -1,4 +1,0 @@
-Framework
----------
-
-.. doxygenclass:: cppmicroservices::Framework

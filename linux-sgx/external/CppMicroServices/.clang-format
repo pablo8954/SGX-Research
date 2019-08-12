@@ -1,9 +1,0 @@
----
-BasedOnStyle: Mozilla
-
-# Reflowing comments interfers with .rst identation
-ReflowComments: false
-AlwaysBreakAfterReturnType: None
-AlwaysBreakAfterDefinitionReturnType: None
-IndentPPDirectives: AfterHash
-...

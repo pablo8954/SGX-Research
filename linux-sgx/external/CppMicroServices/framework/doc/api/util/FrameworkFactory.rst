@@ -1,4 +1,0 @@
-FrameworkFactory
-----------------
-
-.. doxygenclass:: cppmicroservices::FrameworkFactory
