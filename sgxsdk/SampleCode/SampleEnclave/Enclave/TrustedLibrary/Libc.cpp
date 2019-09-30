@@ -59,6 +59,9 @@ void ecall_sgx_cpuid(int cpuinfo[4], int leaf)
 }
 
 extern "C" sgx_status_t trts_mprotect(size_t start, size_t size, uint64_t perms);
+extern "C" sgx_status_t trts_mmap(size_t start, size_t size);
+extern "C" sgx_status_t trts_munmap(size_t start, size_t size);
+
 extern uint8_t __ImageBase;
 
 void ecall_test_mprotect(void)
@@ -80,9 +83,11 @@ void ecall_test_mprotect(void)
     {
         //get mprotect timings
         ocall_gettime(&start_time);
-        trts_mprotect(start, size, 0x4);
-        // trts_mprotect(start, size, 0x7);
-        ocall_gettime(&end_time);
+        //trts_mprotect(start, size, 0x4);
+        //trts_mprotect(start, size, 0x7);
+        trts_munmap(start, size);
+        trts_mmap(start, size);
+        //ocall_gettime(&end_time);
         
         if ((end_time - start_time) < 0)
         {
