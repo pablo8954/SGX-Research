@@ -72,7 +72,7 @@ void ecall_test_mprotect(void)
     size_t size  = 4096; // One page (4KB)
 
     memset((void *) start, 0, size);
-    
+
     unsigned long start_time, end_time;
     unsigned long average_time_mprotect = 0.0;
     unsigned long average_time_ocall = 0.0;
@@ -88,16 +88,15 @@ void ecall_test_mprotect(void)
         trts_munmap(start, size);
         trts_mmap(start, size);
         //ocall_gettime(&end_time);
-        
-        if ((end_time - start_time) < 0)
+
+        if (end_time < start_time)
         {
             average_time_mprotect += 1000000000 + end_time - start_time;
         }
-
-        else 
+        else
         {
             average_time_mprotect += end_time - start_time;
-        }   
+        }
     }
 
     //get ocall overhead timings
@@ -107,15 +106,14 @@ void ecall_test_mprotect(void)
         ocall_nothing();
         ocall_gettime(&end_time);
 
-        if ((end_time - start_time) < 0)
+        if (end_time < start_time)
         {
             average_time_ocall += 1000000000 + end_time - start_time;
         }
-
-        else 
+        else
         {
             average_time_ocall += end_time - start_time;
-        }   
+        }
     }
 
     unsigned long mprotect_time = average_time_mprotect/trials;
