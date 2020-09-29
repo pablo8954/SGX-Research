@@ -64,13 +64,9 @@ extern "C" sgx_status_t trts_munmap(size_t start, size_t size);
 
 extern uint8_t __ImageBase;
 
-void ecall_test_mprotect(void)
-{
-    //allocate pages
-    size_t start = (size_t) malloc(4096 + 4096);
-    start = (start + 4096 - 1) & ~(4096 - 1);
-    size_t size  = 4096; // One page (4KB)
 
+void perform_test(size_t start, size_t size)
+{
     memset((void *) start, 0, size);
 
     unsigned long start_time, end_time;
@@ -87,13 +83,9 @@ void ecall_test_mprotect(void)
         //trts_mprotect(start, size, 0x7);
         trts_munmap(start, size);
         trts_mmap(start, size);
-        //ocall_gettime(&end_time);
+        ocall_gettime(&end_time);
 
-        if (end_time < start_time)
-        {
-            average_time_mprotect += 1000000000 + end_time - start_time;
-        }
-        else
+        if (end_time > start_time)
         {
             average_time_mprotect += end_time - start_time;
         }
@@ -106,11 +98,7 @@ void ecall_test_mprotect(void)
         ocall_nothing();
         ocall_gettime(&end_time);
 
-        if (end_time < start_time)
-        {
-            average_time_ocall += 1000000000 + end_time - start_time;
-        }
-        else
+        if (end_time > start_time)
         {
             average_time_ocall += end_time - start_time;
         }
@@ -123,3 +111,26 @@ void ecall_test_mprotect(void)
     printf("Average ocall time: %lu ns\n", ocall_time);
     printf("mprotect time without ocall: %lu ns\n\n", mprotect_time - ocall_time);
 }
+
+void ecall_test_mprotect(void)
+{
+    /* 
+    Todo: Create array of all the page sizes
+    
+    loop the tests through them
+        modify the timings to not be in nanoseconds
+    
+    donzo
+    
+    */
+    //allocate pages
+    size_t start = (size_t) malloc(4096 + 4096);
+    start = (start + 4096 - 1) & ~(4096 - 1);
+    size_t size  = 4096; // One page (4KB)
+
+    for (int i = 0; i < 2; i++)
+    {
+        perform_test(start, size);
+    }
+}
+

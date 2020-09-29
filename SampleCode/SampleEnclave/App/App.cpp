@@ -199,7 +199,6 @@ int SGX_CDECL main(int argc, char *argv[])
     sgx_destroy_enclave(global_eid);
     
     printf("Info: SampleEnclave successfully returned.\n");
-
     printf("Enter a character before exit ...\n");
     getchar();
     return 0;
@@ -212,5 +211,6 @@ unsigned long ocall_gettime(void)
 {
     timespec time;
     clock_gettime(CLOCK_REALTIME, &time);
+    printf("Time at gettime: %lu \n", time.tv_nsec);
     return time.tv_nsec;
 }
