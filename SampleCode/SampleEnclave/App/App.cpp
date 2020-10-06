@@ -207,10 +207,22 @@ int SGX_CDECL main(int argc, char *argv[])
 void ocall_nothing(void) {}
 
 //retrieves time for timing mprotect & ocall functions
-unsigned long ocall_gettime(void)
+unsigned long* ocall_gettime(void)
 {
-    timespec time;
+    struct timespec time;
     clock_gettime(CLOCK_REALTIME, &time);
-    printf("Time at gettime: %lu \n", time.tv_nsec);
-    return time.tv_nsec;
+    unsigned long* time_array = new unsigned long[2];
+    time_array[0] = time.tv_nsec;
+    time_array[1] = time.tv_sec;
+
+    // for (int i = 0; i < 2; i++){
+    //     if (i ==0){
+    //         printf("NANO: %lu\n", time_array[i]);
+    //     }
+    //     else{
+    //         printf("SEC: %lu\n", time_array[i]);
+    //     }
+    // }
+
+    return time_array;
 }
