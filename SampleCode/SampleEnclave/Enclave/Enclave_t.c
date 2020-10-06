@@ -157,7 +157,7 @@ typedef struct ms_ocall_pointer_in_out_t {
 } ms_ocall_pointer_in_out_t;
 
 typedef struct ms_ocall_gettime_t {
-	unsigned long int ms_retval;
+	unsigned long int* ms_time_array;
 } ms_ocall_gettime_t;
 
 typedef struct ms_sgx_oc_cpuidex_t {
@@ -1388,14 +1388,21 @@ sgx_status_t SGX_CDECL ocall_nothing(void)
 
 	return status;
 }
-sgx_status_t SGX_CDECL ocall_gettime(unsigned long int* retval)
+sgx_status_t SGX_CDECL ocall_gettime(unsigned long int time_array[2])
 {
 	sgx_status_t status = SGX_SUCCESS;
+	size_t _len_time_array = 2 * sizeof(unsigned long int);
 
 	ms_ocall_gettime_t* ms = NULL;
 	size_t ocalloc_size = sizeof(ms_ocall_gettime_t);
 	void *__tmp = NULL;
 
+	void *__tmp_time_array = NULL;
+
+	CHECK_ENCLAVE_POINTER(time_array, _len_time_array);
+
+	if (ADD_ASSIGN_OVERFLOW(ocalloc_size, (time_array != NULL) ? _len_time_array : 0))
+		return SGX_ERROR_INVALID_PARAMETER;
 
 	__tmp = sgx_ocalloc(ocalloc_size);
 	if (__tmp == NULL) {
@@ -1406,10 +1413,29 @@ sgx_status_t SGX_CDECL ocall_gettime(unsigned long int* retval)
 	__tmp = (void *)((size_t)__tmp + sizeof(ms_ocall_gettime_t));
 	ocalloc_size -= sizeof(ms_ocall_gettime_t);
 
+	if (time_array != NULL) {
+		ms->ms_time_array = (unsigned long int*)__tmp;
+		__tmp_time_array = __tmp;
+		if (_len_time_array % sizeof(*time_array) != 0) {
+			sgx_ocfree();
+			return SGX_ERROR_INVALID_PARAMETER;
+		}
+		memset(__tmp_time_array, 0, _len_time_array);
+		__tmp = (void *)((size_t)__tmp + _len_time_array);
+		ocalloc_size -= _len_time_array;
+	} else {
+		ms->ms_time_array = NULL;
+	}
+	
 	status = sgx_ocall(7, ms);
 
 	if (status == SGX_SUCCESS) {
-		if (retval) *retval = ms->ms_retval;
+		if (time_array) {
+			if (memcpy_s((void*)time_array, _len_time_array, __tmp_time_array, _len_time_array)) {
+				sgx_ocfree();
+				return SGX_ERROR_UNEXPECTED;
+			}
+		}
 	}
 	sgx_ocfree();
 	return status;

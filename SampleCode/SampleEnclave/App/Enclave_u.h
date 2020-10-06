@@ -63,7 +63,7 @@ void SGX_UBRIDGE(SGX_NOCONVENTION, ocall_nothing, (void));
 #endif
 #ifndef OCALL_GETTIME_DEFINED__
 #define OCALL_GETTIME_DEFINED__
-unsigned long* SGX_UBRIDGE(SGX_NOCONVENTION, ocall_gettime, (void));
+void SGX_UBRIDGE(SGX_NOCONVENTION, ocall_gettime, (unsigned long int time_array[2]));
 #endif
 #ifndef SGX_OC_CPUIDEX_DEFINED__
 #define SGX_OC_CPUIDEX_DEFINED__

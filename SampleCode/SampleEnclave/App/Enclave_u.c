@@ -131,7 +131,7 @@ typedef struct ms_ocall_pointer_in_out_t {
 } ms_ocall_pointer_in_out_t;
 
 typedef struct ms_ocall_gettime_t {
-	unsigned long int ms_retval;
+	unsigned long int* ms_time_array;
 } ms_ocall_gettime_t;
 
 typedef struct ms_sgx_oc_cpuidex_t {
@@ -219,7 +219,7 @@ static sgx_status_t SGX_CDECL Enclave_ocall_nothing(void* pms)
 static sgx_status_t SGX_CDECL Enclave_ocall_gettime(void* pms)
 {
 	ms_ocall_gettime_t* ms = SGX_CAST(ms_ocall_gettime_t*, pms);
-	ms->ms_retval = ocall_gettime();
+	ocall_gettime(ms->ms_time_array);
 
 	return SGX_SUCCESS;
 }

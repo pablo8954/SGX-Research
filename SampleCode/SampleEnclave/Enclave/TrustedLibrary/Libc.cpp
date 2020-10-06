@@ -69,81 +69,82 @@ extern "C" sgx_status_t trts_munmap(size_t start, size_t size);
 extern uint8_t __ImageBase;
 
 
-// void perform_test(size_t start, size_t size)
-// {
-//     memset((void *) start, 0, size);
+void perform_test(size_t start, size_t size)
+{
+    memset((void *) start, 0, size);
 
-//     unsigned long start_time[2], end_time[2];
-//     double average_time_mprotect = 0.0;
-//     long double average_time_ocall = 0.0;
-//     int trials = 1;
+    unsigned long start_time[2], end_time[2];
+    double average_time_mprotect = 0.0;
+    long double average_time_ocall = 0.0;
+    int trials = 1;
 
-//     /* Time mprotect and overhead */
-//     for (int i = 0; i < trials; i++)
-//     {
-//         //get mprotect timings
-//         ocall_gettime(start_time);
-//         //trts_mprotect(start, size, 0x4);
-//         //trts_mprotect(start, size, 0x7);
-//         trts_munmap(start, size);
-//         trts_mmap(start, size);
-//         ocall_gettime(end_time);
+    /* Time mprotect and overhead */
+    for (int i = 0; i < trials; i++)
+    {
+        //get mprotect timings
+        ocall_gettime(start_time);
+        //trts_mprotect(start, size, 0x4);
+        //trts_mprotect(start, size, 0x7);
+        trts_munmap(start, size);
+        trts_mmap(start, size);
+        ocall_gettime(end_time);
 
-//         average_time_mprotect = (end_time[1] - start_time[1]) + (end_time[0] - start_time[0]) / BILLION;
-//         for (int j = 0; j < 2; j++){
-//             if (j ==0){
-//                 printf("NANO: %lu\n", start_time[i]);
-//             }
-//             else{
-//                 printf("SEC: %lu\n", start_time[i]);
-//             }
-//         }
+        average_time_mprotect = (end_time[1] - start_time[1]) + (end_time[0] - start_time[0]) / BILLION;
 
-//         for (int j = 0; j < 2; j++){
-//             if (j ==0){
-//                 printf("NANO: %lu\n", end_time[i]);
-//             }
-//             else{
-//                 printf("SEC: %lu\n", end_time[i]);
-//             }
-//         }
-//     }
-//     //get ocall overhead timings
-//     for (int i = 0; i < trials; i++)
-//     {
-//         ocall_gettime(start_time);
-//         ocall_nothing();
-//         ocall_gettime(end_time);
-//         printf("__________");
-//         average_time_ocall = (end_time[1] - start_time[1]) + (end_time[0] - start_time[0]) / BILLION;
-//         for (int j = 0; j < 2; j++){
-//             if (j ==0){
-//                 printf("NANO: %lu\n", start_time[i]);
-//             }
-//             else{
-//                 printf("SEC: %lu\n", start_time[i]);
-//             }
-//         }
+        for (int j = 0; j < 2; j++){
+            if (j ==0){
+                printf("Start NANO: %lu\n", start_time[i]);
+            }
+            else{
+                printf("Start SEC: %lu\n", start_time[i]);
+            }
+        }
 
-//         for (int j = 0; j < 2; j++){
-//             if (j ==0){
-//                 printf("NANO: %lu\n", end_time[i]);
-//             }
-//             else{
-//                 printf("SEC: %lu\n", end_time[i]);
-//             }
-//         }
-//     }
-//     printf("Average Time Mprotect: %f\n", average_time_mprotect);
-//     printf("Average Time Ocall: %f\n", average_time_ocall);
+        for (int j = 0; j < 2; j++){
+            if (j ==0){
+                printf("End NANO: %lu\n", end_time[i]);
+            }
+            else{
+                printf("End SEC: %lu\n", end_time[i]);
+            }
+        }
+    }
+    //get ocall overhead timings
+    for (int i = 0; i < trials; i++)
+    {
+        ocall_gettime(start_time);
+        ocall_nothing();
+        ocall_gettime(end_time);
+        printf("__________");
+        average_time_ocall = (end_time[1] - start_time[1]) + (end_time[0] - start_time[0]) / BILLION;
+        for (int j = 0; j < 2; j++){
+            if (j ==0){
+                printf("Start NANO: %lu\n", start_time[i]);
+            }
+            else{
+                printf("Start SEC: %lu\n", start_time[i]);
+            }
+        }
 
-//     // unsigned long mprotect_time = average_time_mprotect/trials;
-//     // unsigned long ocall_time = average_time_ocall/trials;
+        for (int j = 0; j < 2; j++){
+            if (j ==0){
+                printf("End NANO: %lu\n", end_time[i]);
+            }
+            else{
+                printf("End SEC: %lu\n", end_time[i]);
+            }
+        }
+    }
+    printf("Average Time Mprotect: %f\n", average_time_mprotect);
+    printf("Average Time Ocall: %f\n", average_time_ocall);
 
-//     // printf("\nAverage trts_mprotect time: %f s \n", mprotect_time);
-//     // printf("Average ocall time: %f s\n", ocall_time);
-//     // printf("mprotect time without ocall: %f s\n\n", mprotect_time - ocall_time);
-// }
+    // unsigned long mprotect_time = average_time_mprotect/trials;
+    // unsigned long ocall_time = average_time_ocall/trials;
+
+    // printf("\nAverage trts_mprotect time: %f s \n", mprotect_time);
+    // printf("Average ocall time: %f s\n", ocall_time);
+    // printf("mprotect time without ocall: %f s\n\n", mprotect_time - ocall_time);
+}
 
 
 void test_entry(void)
@@ -153,37 +154,28 @@ void test_entry(void)
 
 void ecall_test_mprotect(void)
 {
-    /* 
-    Todo: Create array of all the page sizes
-    
-    loop the tests through them
-        modify the timings to not be in nanoseconds
-    
-    donzo
-    
-    */
-    void* ptr = (void*) &test_entry;
+    // void* ptr = (void*) &test_entry;
 
-    size_t size = 4096;
-    //align start to page boundary 
-    size_t start = ((uintptr_t)ptr +  4096 - 1) & ~(4096  - 1);
-    trts_mprotect(start, size*2, 0x7);
-    test_entry();
+    // size_t size = 4096;
+    // //align start to page boundary 
+    // size_t start = ((uintptr_t)ptr +  4096 - 1) & ~(4096  - 1);
+    // trts_mprotect(start, size*2, 0x7);
+    // test_entry();
 
 
 
-    // //allocate pages
-    // size_t start = (size_t) malloc(4096 + 4096); //allocate 256 pages - reuse pages for 1, 2, 4, 8, 16, .... 
+    //allocate pages
+    size_t start = (size_t) malloc(4096 + 4096); //allocate 256 pages - reuse pages for 1, 2, 4, 8, 16, .... 
 
-    // //align start to page boundary
-    // start = (start +  4096 - 1) & ~(4096  - 1);
-    // size_t size  = 4096; // One page (4KB)
+    //align start to page boundary
+    start = (start +  4096 - 1) & ~(4096  - 1);
+    size_t size  = 4096; // One page (4KB)
 
 
-    // for (int i = 0; i < 1; i++)
-    // {
-    //     perform_test(start, size);
-    // }
-    // // free malloc space
+    for (int i = 0; i < 1; i++)
+    {
+        perform_test(start, size);
+    }
+    // free malloc space
 }
 
