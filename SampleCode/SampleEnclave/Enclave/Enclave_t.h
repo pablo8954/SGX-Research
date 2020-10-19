@@ -73,7 +73,7 @@ sgx_status_t SGX_CDECL ocall_pointer_out(int* val);
 sgx_status_t SGX_CDECL ocall_pointer_in_out(int* val);
 sgx_status_t SGX_CDECL ocall_function_allow(void);
 sgx_status_t SGX_CDECL ocall_nothing(void);
-sgx_status_t SGX_CDECL ocall_gettime(unsigned long int time_array[2]);
+sgx_status_t SGX_CDECL ocall_gettime(long int time_array[2]);
 sgx_status_t SGX_CDECL sgx_oc_cpuidex(int cpuinfo[4], int leaf, int subleaf);
 sgx_status_t SGX_CDECL sgx_thread_wait_untrusted_event_ocall(int* retval, const void* self);
 sgx_status_t SGX_CDECL sgx_thread_set_untrusted_event_ocall(int* retval, const void* waiter);

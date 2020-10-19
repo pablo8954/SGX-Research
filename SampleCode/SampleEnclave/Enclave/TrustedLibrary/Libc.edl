@@ -58,6 +58,6 @@ enclave {
     untrusted {
         void ocall_nothing(void);
 
-        void ocall_gettime([out] unsigned long time_array[2]);
+        void ocall_gettime([out] long time_array[2]);
     };
 };

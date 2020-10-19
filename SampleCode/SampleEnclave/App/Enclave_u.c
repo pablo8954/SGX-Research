@@ -131,7 +131,7 @@ typedef struct ms_ocall_pointer_in_out_t {
 } ms_ocall_pointer_in_out_t;
 
 typedef struct ms_ocall_gettime_t {
-	unsigned long int* ms_time_array;
+	long int* ms_time_array;
 } ms_ocall_gettime_t;
 
 typedef struct ms_sgx_oc_cpuidex_t {

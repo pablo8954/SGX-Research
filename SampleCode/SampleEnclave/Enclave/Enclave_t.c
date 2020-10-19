@@ -157,7 +157,7 @@ typedef struct ms_ocall_pointer_in_out_t {
 } ms_ocall_pointer_in_out_t;
 
 typedef struct ms_ocall_gettime_t {
-	unsigned long int* ms_time_array;
+	long int* ms_time_array;
 } ms_ocall_gettime_t;
 
 typedef struct ms_sgx_oc_cpuidex_t {
@@ -1388,10 +1388,10 @@ sgx_status_t SGX_CDECL ocall_nothing(void)
 
 	return status;
 }
-sgx_status_t SGX_CDECL ocall_gettime(unsigned long int time_array[2])
+sgx_status_t SGX_CDECL ocall_gettime(long int time_array[2])
 {
 	sgx_status_t status = SGX_SUCCESS;
-	size_t _len_time_array = 2 * sizeof(unsigned long int);
+	size_t _len_time_array = 2 * sizeof(long int);
 
 	ms_ocall_gettime_t* ms = NULL;
 	size_t ocalloc_size = sizeof(ms_ocall_gettime_t);
@@ -1414,7 +1414,7 @@ sgx_status_t SGX_CDECL ocall_gettime(unsigned long int time_array[2])
 	ocalloc_size -= sizeof(ms_ocall_gettime_t);
 
 	if (time_array != NULL) {
-		ms->ms_time_array = (unsigned long int*)__tmp;
+		ms->ms_time_array = (long int*)__tmp;
 		__tmp_time_array = __tmp;
 		if (_len_time_array % sizeof(*time_array) != 0) {
 			sgx_ocfree();
