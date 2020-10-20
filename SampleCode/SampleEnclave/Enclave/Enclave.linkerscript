@@ -63,6 +63,12 @@ SECTIONS
     /* .gnu.warning sections are handled specially by elf32.em.  */
     *(.gnu.warning)
   }
+
+  .security : 
+  {
+    *(.security)
+  }
+
   .fini           :
   {
     KEEP (*(SORT_NONE(.fini)))

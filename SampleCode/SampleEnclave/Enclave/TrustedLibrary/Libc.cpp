@@ -139,13 +139,13 @@ void ecall_test_mprotect(void)
 
 
     //allocate pages
-    size_t start = (size_t) malloc(4096 * 64); //allocate 256 pages - reuse pages for 1, 2, 4, 8, 16, .... 
+    size_t start = (size_t) malloc(4096 * 129); //allocate 256 pages - reuse pages for 1, 2, 4, 8, 16, .... 
 
     //align start to page boundary
     start = (start +  4096 - 1) & ~(4096  - 1);
 
-    size_t size[7] = {4096, 4096*2, 4096 * 4, 4096 *8,4096 *16,4096 *32,4096 *64};
-    for (int i = 0; i < 7; i++)
+    size_t size[8] = {4096, 4096*2, 4096 * 4, 4096 *8,4096 *16,4096 *32,4096 *64, 4096 * 128};
+    for (int i = 0; i < 8; i++)
     {
         perform_test(start, size[i]);
     }
