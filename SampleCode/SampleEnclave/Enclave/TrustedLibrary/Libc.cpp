@@ -69,58 +69,6 @@ extern "C" sgx_status_t trts_munmap(size_t start, size_t size);
 extern uint8_t __ImageBase;
 
 
-void perform_test(size_t start, size_t size)
-{
-    memset((void *) start, 0, size);
-
-    long start_time[2], end_time[2];
-    long double average_time_mprotect = 0.0;
-    long double average_time_ocall = 0.0;
-    long double trials = 10000.0;
-
-    /* Time mprotect and overhead */
-    for (int i = 0; i < trials; i++)
-    {
-        //get mprotect timings
-        ocall_gettime(start_time);
-        // trts_mprotect(start, size, 0x4);
-        trts_mprotect(start, size, 0x7);
-        trts_munmap(start, size);
-        trts_mmap(start, size);
-        ocall_gettime(end_time);
-
-        if (end_time[1] - start_time[1] < 0 || end_time[0] - start_time[0] < 0)
-        {
-            i = i -1;
-            continue;
-        }
-
-        average_time_mprotect = average_time_mprotect + ((end_time[1] - start_time[1]) + (end_time[0] - start_time[0]) / BILLION);
-
-    }
-    //get ocall overhead timings
-    for (int i = 0; i < trials; i++)
-    {
-        ocall_gettime(start_time);
-        ocall_nothing();
-        ocall_gettime(end_time);
-        if (end_time[1] - start_time[1] < 0 || end_time[0] - start_time[0] < 0)
-        {
-            i = i -1;
-            continue;
-        }
-        average_time_ocall = average_time_ocall + ((end_time[1] - start_time[1]) + (end_time[0] - start_time[0]) / BILLION);
-    }
-
-    long double mprotect_time = average_time_mprotect/trials;
-    long double ocall_time = average_time_ocall/trials;
-
-    // printf("\nAverage trts_mprotect time: %Lf s \n", mprotect_time);
-    // printf("Average ocall time: %Lf s\n", ocall_time);
-    printf("mprotect time without ocall: %Lf s\n\n", mprotect_time - ocall_time);
-}
-
-
 void
 __attribute__((section(".security_mointor"), unused))
 test_entry (void)
@@ -130,26 +78,11 @@ test_entry (void)
 
 void ecall_test_mprotect(void)
 {
-    // void* ptr = (void*) &test_entry;
+    void* ptr = (void*) &test_entry;
 
-    // size_t size = 4096;
-    // //align start to page boundary 
-    // size_t start = ((uintptr_t)ptr +  4096 - 1) & ~(4096  - 1);
-    // trts_mprotect(start, size*2, 0x7);
+    size_t size = 4096;
+    //align start to page boundary 
+    size_t start = ((uintptr_t)ptr +  4096 - 1) & ~(4096  - 1);
+    trts_mprotect(start, size*2, 0x7);
     test_entry();
-
-
-
-    //allocate pages
-    size_t start = (size_t) malloc(4096 * 129); //allocate 256 pages - reuse pages for 1, 2, 4, 8, 16, .... 
-
-    //align start to page boundary
-    start = (start +  4096 - 1) & ~(4096  - 1);
-
-    size_t size[8] = {4096, 4096*2, 4096 * 4, 4096 *8,4096 *16,4096 *32,4096 *64, 4096 * 128};
-    for (int i = 0; i < 8; i++)
-    {
-        perform_test(start, size[i]);
-    }
-    // free malloc space
 }
