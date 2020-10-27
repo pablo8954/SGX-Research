@@ -121,7 +121,9 @@ void perform_test(size_t start, size_t size)
 }
 
 
-void test_entry(void)
+void
+__attribute__((section(".security_mointor"), unused))
+test_entry (void)
 {
     printf("HELLO WORLD");
 }
@@ -134,7 +136,7 @@ void ecall_test_mprotect(void)
     // //align start to page boundary 
     // size_t start = ((uintptr_t)ptr +  4096 - 1) & ~(4096  - 1);
     // trts_mprotect(start, size*2, 0x7);
-    // test_entry();
+    test_entry();
 
 
 

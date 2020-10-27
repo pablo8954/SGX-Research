@@ -64,10 +64,13 @@ SECTIONS
     *(.gnu.warning)
   }
 
-  .security : 
+  . = ALIGN(4096);
+  .security_monitor :
   {
-    *(.security)
+    *(
+    .security_monitor)
   }
+  . = ALIGN(4096);
 
   .fini           :
   {
