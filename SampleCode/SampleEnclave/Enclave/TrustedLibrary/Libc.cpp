@@ -32,6 +32,7 @@
 
 #include <string.h>
 #include <time.h>
+#include <math.h>
 
 #include "sgx_cpuid.h"
 
@@ -73,30 +74,34 @@ void perform_test(size_t start, size_t size)
 {
     memset((void *) start, 0, size);
 
+    long double trials = 1000.0;
+
+    long double* trial_times = (long double*)malloc((int)trials * sizeof(long double));
+    long double* ocall_times = (long double*)malloc((int)trials * sizeof(long double));
+
     long start_time[2], end_time[2];
     long double average_time_mprotect = 0.0;
     long double average_time_ocall = 0.0;
-    long double trials = 10000.0;
 
     /* Time mprotect and overhead */
     for (int i = 0; i < trials; i++)
     {
         //get mprotect timings
         ocall_gettime(start_time);
-        // trts_mprotect(start, size, 0x4);
-        trts_mprotect(start, size, 0x7);
+        trts_mprotect(start, size, 0x4);
+        // trts_mprotect(start, size, 0x7);
         trts_munmap(start, size);
         trts_mmap(start, size);
         ocall_gettime(end_time);
 
         if (end_time[1] - start_time[1] < 0 || end_time[0] - start_time[0] < 0)
         {
+            // repeat attempted trial if data is invalid
             i = i -1;
             continue;
         }
-
-        average_time_mprotect = average_time_mprotect + ((end_time[1] - start_time[1]) + (end_time[0] - start_time[0]) / BILLION);
-
+        trial_times[i] = ((end_time[1] - start_time[1]) + (end_time[0] - start_time[0]) / BILLION);
+        average_time_mprotect = average_time_mprotect + trial_times[i] ;
     }
     //get ocall overhead timings
     for (int i = 0; i < trials; i++)
@@ -106,38 +111,49 @@ void perform_test(size_t start, size_t size)
         ocall_gettime(end_time);
         if (end_time[1] - start_time[1] < 0 || end_time[0] - start_time[0] < 0)
         {
+            // repeat attempted trial if data is invalid
             i = i -1;
             continue;
         }
-        average_time_ocall = average_time_ocall + ((end_time[1] - start_time[1]) + (end_time[0] - start_time[0]) / BILLION);
+        
+        ocall_times[i] = ((end_time[1] - start_time[1]) + (end_time[0] - start_time[0]) / BILLION);
+        average_time_ocall = average_time_ocall + ocall_times[i];
     }
 
+    //get means
     long double mprotect_time = average_time_mprotect/trials;
     long double ocall_time = average_time_ocall/trials;
 
-    // printf("\nAverage trts_mprotect time: %Lf s \n", mprotect_time);
-    // printf("Average ocall time: %Lf s\n", ocall_time);
+    //compute standard deviation & CI
+    long double mprotect_deviation = 0;
+    long double mprotect_sumsqr = 0;
+    long double ocall_deviation = 0;
+    long double ocall_sumsqr = 0;
+
+    for (int i = 0; i < trials; i++)
+    {
+        mprotect_deviation = trial_times[i] - mprotect_time;
+        mprotect_sumsqr += mprotect_deviation * mprotect_deviation;
+
+        ocall_deviation = ocall_times[i] - ocall_time;
+        ocall_sumsqr += ocall_deviation * ocall_deviation;
+    }
+    long double mprotect_var = mprotect_sumsqr/trials;
+    long double ocall_var = ocall_sumsqr/trials;
+
+    long double mprotect_stddeviation = sqrt(mprotect_var);
+    long double ocall_stddeviation = sqrt(ocall_var);
+
+    long double CI_mprotect = 1.962 * (mprotect_stddeviation/sqrt(trials));
+    long double CI_Ocall = 1.962 * (ocall_stddeviation/sqrt(trials));
+
     printf("mprotect time without ocall: %Lf s\n\n", mprotect_time - ocall_time);
+    printf("mprotect time confidence interval: %Lf s\n\n", CI_mprotect);
 }
 
-
-void test_entry(void)
-{
-    printf("HELLO WORLD");
-}
 
 void ecall_test_mprotect(void)
 {
-    // void* ptr = (void*) &test_entry;
-
-    // size_t size = 4096;
-    // //align start to page boundary 
-    // size_t start = ((uintptr_t)ptr +  4096 - 1) & ~(4096  - 1);
-    // trts_mprotect(start, size*2, 0x7);
-    // test_entry();
-
-
-
     //allocate pages
     size_t start = (size_t) malloc(4096 * 129); //allocate 256 pages - reuse pages for 1, 2, 4, 8, 16, .... 
 
@@ -150,4 +166,6 @@ void ecall_test_mprotect(void)
         perform_test(start, size[i]);
     }
     // free malloc space
+    free(&start);
+    free(size);
 }
