@@ -147,7 +147,7 @@ void perform_test(size_t start, size_t size)
     long double CI_mprotect = 1.962 * (mprotect_stddeviation/sqrt(trials));
     long double CI_Ocall = 1.962 * (ocall_stddeviation/sqrt(trials));
 
-    printf("mprotect time without ocall: %Lf s\n\n", mprotect_time - ocall_time);
+    printf("mprotect time without ocall: %Lf s\n", mprotect_time - ocall_time);
     printf("mprotect time confidence interval: %Lf s\n\n", CI_mprotect);
 }
 
@@ -161,11 +161,15 @@ void ecall_test_mprotect(void)
     start = (start +  4096 - 1) & ~(4096  - 1);
 
     size_t size[8] = {4096, 4096*2, 4096 * 4, 4096 *8,4096 *16,4096 *32,4096 *64, 4096 * 128};
+    int page = 1;
     for (int i = 0; i < 8; i++)
     {
+        printf("Page Size: %d\n", page);
         perform_test(start, size[i]);
+        page *= 2;
     }
     // free malloc space
-    free(&start);
-    free(size);
+    printf("done");
+    // free(&start);
+    // free(size);
 }
