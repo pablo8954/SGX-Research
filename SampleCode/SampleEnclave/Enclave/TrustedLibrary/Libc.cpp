@@ -68,9 +68,15 @@ extern "C" sgx_status_t trts_munmap(size_t start, size_t size);
 
 extern uint8_t __ImageBase;
 
+// void
+// __attribute__((section(".pablo_buffer"), unused))
+// pablo_buffer(void)
+// {
+//     int x = 1;
+// }
 
 void
-__attribute__((section(".security_mointor"), unused))
+__attribute__((section(".security_monitor"), unused))
 test_entry (void)
 {
     printf("HELLO WORLD");
