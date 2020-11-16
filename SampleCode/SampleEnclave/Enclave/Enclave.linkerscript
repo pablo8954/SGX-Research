@@ -53,6 +53,13 @@ SECTIONS
   .plt            : { *(.plt) *(.iplt) }
 .plt.got        : { *(.plt.got) }
 .plt.sec        : { *(.plt.sec) }
+  . = ALIGN(4096);
+  .security_monitor :
+  {
+    *(
+    .security_monitor)
+  }
+  . = ALIGN(4096);
   .text           :
   {
     *(.text.unlikely .text.*_unlikely .text.unlikely.*)
@@ -65,13 +72,7 @@ SECTIONS
   }
 
 
-  . = ALIGN(4096);
-  .security_monitor :
-  {
-    *(
-    .security_monitor)
-  }
-  . = ALIGN(4096);
+
 
   .fini           :
   {

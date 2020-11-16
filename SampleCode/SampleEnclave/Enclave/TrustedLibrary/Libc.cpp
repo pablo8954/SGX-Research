@@ -75,20 +75,24 @@ extern uint8_t __ImageBase;
 //     int x = 1;
 // }
 
+
 void
 __attribute__((section(".security_monitor"), unused))
-test_entry (void)
+helloWorld (void)
 {
     printf("HELLO WORLD");
 }
 
 void ecall_test_mprotect(void)
 {
-    void* ptr = (void*) &test_entry;
+
+    void* ptr = (void*) &helloWorld; //test entry function
+    //ptr = 0x7fbbb8002000
 
     size_t size = 4096;
     //align start to page boundary 
     size_t start = ((uintptr_t)ptr +  4096 - 1) & ~(4096  - 1);
-    trts_mprotect(start, size*2, 0x7);
-    test_entry();
+    trts_mprotect(start, size*1, 0x1);
+    printf("Addr: %p\n", start);
+    helloWorld();
 }
