@@ -68,13 +68,71 @@ extern "C" sgx_status_t trts_munmap(size_t start, size_t size);
 
 extern uint8_t __ImageBase;
 
-// void
-// __attribute__((section(".pablo_buffer"), unused))
-// pablo_buffer(void)
-// {
-//     int x = 1;
-// }
+int NesTEE_Entry(size_t *page, size_t *stack, void* fun_addr)
+{
+   __asm__ __volatile__(
+    
+        // Unprotext NesTEE Page
+        "mov $06H, %%eax"
+        "mov $7, %%rbx" //TODO: verify this line is correct SECINFO_RWX
+        "mov %0, %%rcx"
+        "ENCLU"
+        
+        // Check ENCLU parameters
+        "cmp $06H, %%eax"
+        "jne Crash"
+        "cmp %0, %%rcx"
+        "jne Crash"
+        
+        // Set up secure stack
+        "mov %%rsp, %%rbx"
+        "mov %1, %%rsp"
+        "push %rbx"
 
+        // Go to NesTEE LibOS
+        "jmp %2"//TODO: find how to force the jump to NesTEE_LibOS_Start()"
+        :: "r" (page), 
+        "z" (stack), 
+        "x" (fun_addr)
+        );
+        // TODO: ask whether we need 'PR' SECINFO.Flags to be set to 1 (p.19 of manual)
+}
+
+// void* ptr = (void*) &NesTEE_LibOS_Start()
+
+int NesTEE_Exit(size_t *page, size_t *stack)
+{
+    unsigned long long emodpr = 0x0e;
+   __asm__ __volatile__(
+
+        // protect the NesTEE page
+        "mov $0EH, %eax"
+        "mov $1, %rbx"
+        "mov %0, %rcx"
+        "ENCLU"
+
+        // check enclu parameters
+        "cmp $0EH, %eax"
+        "jne Crash"
+        "cmp $1, %rbx"
+        "jne Crash"
+        "cmp %0, %rcx"
+        "jne Crash"
+
+        // restore user stack
+        "pop %rbx"
+        "mov %rbx, %rsp"
+
+        //return to caller
+        "ret"
+        :: "r" (page)
+        ); 
+}
+
+int NesTEE_Crash(int)
+{
+   __asm__ __volatile__("HLT"); 
+}
 
 void
 __attribute__((section(".security_monitor"), unused))
