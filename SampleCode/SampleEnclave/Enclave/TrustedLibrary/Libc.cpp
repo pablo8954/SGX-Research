@@ -68,26 +68,26 @@ extern "C" sgx_status_t trts_munmap(size_t start, size_t size);
 
 extern uint8_t __ImageBase;
 
-int NesTEE_Entry(size_t *page, size_t *stack, void* fun_addr)
+void NesTEE_Entry(size_t *page, size_t *stack, void* fun_addr)
 {
    __asm__ __volatile__(
-    
         // Unprotext NesTEE Page
-        "mov $06H, %%eax"
-        "mov $7, %%rbx" //TODO: verify this line is correct SECINFO_RWX
-        "mov %0, %%rcx"
-        "ENCLU"
+        "mov $06H, %%eax \n"
+        "mov $7, %%rbx \n" //TODO: verify this line is correct SECINFO_RWX
+        "mov %0, %%rcx \n"
+        "ENCLU \n"
         
         // Check ENCLU parameters
-        "cmp $06H, %%eax"
-        "jne Crash"
-        "cmp %0, %%rcx"
-        "jne Crash"
+        "cmp $06H, %%eax \n" 
+        "jne Crash \n"
+        "cmp %0, %%rcx \n"
+        "jne Crash \n"
         
         // Set up secure stack
-        "mov %%rsp, %%rbx"
-        "mov %1, %%rsp"
-        "push %rbx"
+        "mov %%rsp, %%rbx \n"
+        "mov %1, %%rsp \n"
+        "push %rbx \n"
+
 
         // Go to NesTEE LibOS
         "jmp %2"//TODO: find how to force the jump to NesTEE_LibOS_Start()"
@@ -100,19 +100,19 @@ int NesTEE_Entry(size_t *page, size_t *stack, void* fun_addr)
 
 // void* ptr = (void*) &NesTEE_LibOS_Start()
 
-int NesTEE_Exit(size_t *page, size_t *stack)
+void NesTEE_Exit(size_t *page, size_t *stack)
 {
     unsigned long long emodpr = 0x0e;
    __asm__ __volatile__(
 
         // protect the NesTEE page
-        "mov $0EH, %eax"
+        "mov %1, %eax"
         "mov $1, %rbx"
         "mov %0, %rcx"
         "ENCLU"
 
         // check enclu parameters
-        "cmp $0EH, %eax"
+        "cmp %1, %eax"
         "jne Crash"
         "cmp $1, %rbx"
         "jne Crash"
@@ -121,15 +121,15 @@ int NesTEE_Exit(size_t *page, size_t *stack)
 
         // restore user stack
         "pop %rbx"
-        "mov %rbx, %rsp"
+        "mov %2, %rsp"
 
         //return to caller
         "ret"
-        :: "r" (page)
+        :: "r" (page), "a" (emodpr), "b" (stack)
         ); 
 }
 
-int NesTEE_Crash(int)
+void NesTEE_Crash(int)
 {
    __asm__ __volatile__("HLT"); 
 }
