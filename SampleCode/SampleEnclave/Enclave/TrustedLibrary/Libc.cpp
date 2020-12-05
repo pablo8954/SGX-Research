@@ -72,28 +72,28 @@ void NesTEE_Entry(size_t *page, size_t *stack, void* fun_addr)
 {
    __asm__ __volatile__(
         // Unprotext NesTEE Page
-        "mov $06H, %%eax \n"
-        "mov $7, %%rbx \n" //TODO: verify this line is correct SECINFO_RWX
-        "mov %0, %%rcx \n"
+        "movq $0x6, %%rax \n"
+        "movq $7, %%rbx \n" //TODO: verify this line is correct SECINFO_RWX
+        "movq %0, %%rcx \n"
         "ENCLU \n"
         
         // Check ENCLU parameters
-        "cmp $06H, %%eax \n" 
+        "cmp $0x6, %%rax \n" 
         "jne Crash \n"
         "cmp %0, %%rcx \n"
         "jne Crash \n"
         
         // Set up secure stack
-        "mov %%rsp, %%rbx \n"
-        "mov %1, %%rsp \n"
-        "push %rbx \n"
+        "movq %%rsp, %%rbx \n"
+        "movq %1, %%rsp \n"
+        "push %%rbx \n"
 
 
         // Go to NesTEE LibOS
-        "jmp %2"//TODO: find how to force the jump to NesTEE_LibOS_Start()"
+        "jmp %2 \n"//TODO: find how to force the jump to NesTEE_LibOS_Start()"
         :: "r" (page), 
-        "z" (stack), 
-        "x" (fun_addr)
+        "a" (stack), 
+        "b" (fun_addr):
         );
         // TODO: ask whether we need 'PR' SECINFO.Flags to be set to 1 (p.19 of manual)
 }
@@ -106,26 +106,26 @@ void NesTEE_Exit(size_t *page, size_t *stack)
    __asm__ __volatile__(
 
         // protect the NesTEE page
-        "mov %1, %eax"
-        "mov $1, %rbx"
-        "mov %0, %rcx"
-        "ENCLU"
+        "movq %1, %%rax \n"
+        "movq $1, %%rbx \n"
+        "movq %0, %%rcx \n"
+        "ENCLU \n"
 
         // check enclu parameters
-        "cmp %1, %eax"
-        "jne Crash"
-        "cmp $1, %rbx"
-        "jne Crash"
-        "cmp %0, %rcx"
-        "jne Crash"
+        "cmp %1, %%rax \n"
+        "jne Crash \n"
+        "cmp $1, %%rbx \n"
+        "jne Crash \n"
+        "cmp %0, %%rcx \n"
+        "jne Crash \n"
 
         // restore user stack
-        "pop %rbx"
-        "mov %2, %rsp"
+        "pop %%rbx \n"
+        "movq %2, %%rsp \n"
 
         //return to caller
-        "ret"
-        :: "r" (page), "a" (emodpr), "b" (stack)
+        "ret \n"
+        :: "r" (page), "a" (emodpr), "b" (stack):
         ); 
 }
 
@@ -151,6 +151,6 @@ void ecall_test_mprotect(void)
     //align start to page boundary 
     size_t start = ((uintptr_t)ptr +  4096 - 1) & ~(4096  - 1);
     trts_mprotect(start, size*1, 0x1);
-    printf("Addr: %p\n", start);
+    printf("Addr: %zx\n", start);
     helloWorld();
 }
