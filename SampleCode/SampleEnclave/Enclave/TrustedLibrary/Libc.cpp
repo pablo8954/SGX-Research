@@ -67,11 +67,12 @@ extern "C" sgx_status_t trts_mmap(size_t start, size_t size);
 extern "C" sgx_status_t trts_munmap(size_t start, size_t size);
 
 extern uint8_t __ImageBase;
-
-void NesTEE_Entry(size_t *page, size_t *stack, void* fun_addr)
+#if 1
+void __attribute__((section(".nestee_entry"), unused))
+NesTEE_Entry(size_t page, size_t *stack, size_t *fun_addr)
 {
    __asm__ __volatile__(
-        // Unprotext NesTEE Page
+        // Unprotect NesTEE Page
         "movq $0x6, %%rax \n"
         "movq $7, %%rbx \n" //TODO: verify this line is correct SECINFO_RWX
         "movq %0, %%rcx \n"
@@ -79,9 +80,9 @@ void NesTEE_Entry(size_t *page, size_t *stack, void* fun_addr)
         
         // Check ENCLU parameters
         "cmp $0x6, %%rax \n" 
-        "jne Crash \n"
+//        "jne Crash \n"
         "cmp %0, %%rcx \n"
-        "jne Crash \n"
+//        "jne Crash \n"
         
         // Set up secure stack
         "movq %%rsp, %%rbx \n"
@@ -92,48 +93,49 @@ void NesTEE_Entry(size_t *page, size_t *stack, void* fun_addr)
         // Go to NesTEE LibOS
         "jmp %2 \n"//TODO: find how to force the jump to NesTEE_LibOS_Start()"
         :: "r" (page), 
-        "a" (stack), 
-        "b" (fun_addr):
+        "r" ((uint64_t) stack), 
+        "r" ((uint64_t) fun_addr):
         );
         // TODO: ask whether we need 'PR' SECINFO.Flags to be set to 1 (p.19 of manual)
 }
 
 // void* ptr = (void*) &NesTEE_LibOS_Start()
+//unsigned long long emodpr = 0x0e;
 
-void NesTEE_Exit(size_t *page, size_t *stack)
+void __attribute__((section(".nestee_exit"), unused))
+NesTEE_Exit(size_t page, size_t *stack)
 {
-    unsigned long long emodpr = 0x0e;
    __asm__ __volatile__(
 
         // protect the NesTEE page
-        "movq %1, %%rax \n"
+        "movq $0x0e, %%rax \n"
         "movq $1, %%rbx \n"
         "movq %0, %%rcx \n"
         "ENCLU \n"
 
         // check enclu parameters
-        "cmp %1, %%rax \n"
-        "jne Crash \n"
+        "cmp $0x0e, %%rax \n"
+//        "jne Crash \n"
         "cmp $1, %%rbx \n"
-        "jne Crash \n"
+//        "jne Crash \n"
         "cmp %0, %%rcx \n"
-        "jne Crash \n"
+//        "jne Crash \n"
 
         // restore user stack
         "pop %%rbx \n"
-        "movq %2, %%rsp \n"
+        "movq $0x0e, %%rsp \n"
 
         //return to caller
         "ret \n"
-        :: "r" (page), "a" (emodpr), "b" (stack):
+        :: "r" (page)/*, "ai" (emodpr)*/, "r" ((uint64_t) stack):
         ); 
 }
 
-void NesTEE_Crash(int)
+void NesTEE_Crash()
 {
    __asm__ __volatile__("HLT"); 
 }
-
+#endif
 void
 __attribute__((section(".security_monitor"), unused))
 helloWorld (void)
@@ -144,13 +146,16 @@ helloWorld (void)
 void ecall_test_mprotect(void)
 {
 
-    void* ptr = (void*) &helloWorld; //test entry function
+    void* ptr = (void *) &helloWorld; //test entry function
     //ptr = 0x7fbbb8002000
 
+    void *stackPg = 
     size_t size = 4096;
     //align start to page boundary 
     size_t start = ((uintptr_t)ptr +  4096 - 1) & ~(4096  - 1);
-    trts_mprotect(start, size*1, 0x1);
+    trts_mprotect(start, size*1, 0x7);
     printf("Addr: %zx\n", start);
+    NesTEE_Entry(start, (size_t *) &ecall_test_mprotect, (size_t *) ptr);
     helloWorld();
+    NesTEE_Exit(start, (size_t *) &ecall_test_mprotect);
 }

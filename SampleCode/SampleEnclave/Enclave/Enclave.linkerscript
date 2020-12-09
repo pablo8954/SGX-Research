@@ -53,7 +53,21 @@ SECTIONS
   .plt            : { *(.plt) *(.iplt) }
 .plt.got        : { *(.plt.got) }
 .plt.sec        : { *(.plt.sec) }
- 
+
+  . = ALIGN(4096);
+  .nestee_entry :
+  {
+    *(
+    .nestee_entry)
+  }
+
+  . = ALIGN(4096);
+  .nestee_exit :
+  {
+    *(
+    .nestee_exit)
+  }
+
   . = ALIGN(4096);
   .security_monitor :
   {
@@ -241,3 +255,6 @@ SECTIONS
   .gnu.attributes 0 : { KEEP (*(.gnu.attributes)) }
   /DISCARD/ : { *(.note.GNU-stack) *(.gnu_debuglink) *(.gnu.lto_*) }
 }
+
+
+
