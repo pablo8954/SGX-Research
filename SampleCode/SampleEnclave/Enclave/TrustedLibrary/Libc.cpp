@@ -38,7 +38,7 @@
 #include "sgx_trts.h"
 #include "../Enclave.h"
 #include "Enclave_t.h"
-
+#include "sgx_arch.h"
 #define BILLION  1000000000.0
 
 /* ecall_malloc_free:
@@ -69,21 +69,20 @@ extern "C" sgx_status_t trts_munmap(size_t start, size_t size);
 extern uint8_t __ImageBase;
 #if 1
 void __attribute__((section(".nestee_entry"), unused))
-NesTEE_Entry(size_t page, size_t *stack, size_t *fun_addr, size_t *NesTEE_Crash_addr)
+NesTEE_Entry(size_t page, size_t *stack, size_t *fun_addr, size_t *secinfo, size_t *NesTEE_Crash_addr)
 {
    __asm__ __volatile__(
         // Unprotect NesTEE Page
-        "jmp %2 \n" //TODO: TEMPORARY LINE OF CODE
         "movq $0x6, %%rax \n"
-        "movq $7, %%rbx \n" //TODO: verify this line is correct SECINFO_RWX
-        "movq %0, %%rcx \n"
+        "movq %3, %%rbx \n" //TODO: verify this line is correct SECINFO_RWX
+        "movq %%rdi, %%rcx \n"
         "ENCLU \n"
         
         // Check ENCLU parameters
-        "cmp $0x6, %%rax\n" 
-        "jne crash_entry \n"
-        "cmp %0, %%rcx \n"
-        "jne crash_entry \n"
+//        "cmp $0x6, %%rax\n" 
+//        "jne crash_entry \n"
+//        "cmp %0, %%rcx \n"
+//        "jne crash_entry \n"
         
         // Set up secure stack
         "movq %%rsp, %%rbx \n"
@@ -94,7 +93,8 @@ NesTEE_Entry(size_t page, size_t *stack, size_t *fun_addr, size_t *NesTEE_Crash_
         "jmp %2 \n"//TODO: find how to force the jump to NesTEE_LibOS_Start()"
         :: "r" (page), 
         "r" ((uint64_t) stack), 
-        "r" ((uint64_t) fun_addr):
+        "r" ((uint64_t) fun_addr),
+        "r" ((uint64_t) secinfo):
         );
         __asm__ __volatile__(
             "crash_entry: jmp %0 \n" :: "r"((uint64_t) NesTEE_Crash_addr):
@@ -170,7 +170,10 @@ void ecall_test_mprotect(void)
 
     trts_mprotect(start, size, 0x7);
     printf("Addr: %zx\n", start);
-    NesTEE_Entry(start, (size_t *) stack, (size_t *) hello_world_ptr, (size_t *)crash_fun_ptr);
+    sgx_arch_sec_info_t secinfo;
+    memset(&secinfo, 0, sizeof(sgx_arch_sec_info_t));
+    secinfo.flags = 0x7;
+    NesTEE_Entry(start, (size_t *) stack, (size_t *) hello_world_ptr, (size_t *) &secinfo , (size_t *) crash_fun_ptr);
     helloWorld();
     NesTEE_Exit(start, (size_t *) stack, (size_t *)crash_fun_ptr);
 }
