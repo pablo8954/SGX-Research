@@ -90,7 +90,7 @@ NesTEE_Entry(size_t page, size_t *stack, size_t *fun_addr, size_t *secinfo)
         "push %%rbx \n"
 
         // Go to NesTEE LibOS
-        "jmp %2 \n" //TODO: find how to force the jump to NesTEE_LibOS_Start()"
+        "jmp %2 \n" 
         :: "D" ((uint64_t) page), 
         "S" ((uint64_t) stack), 
         "r" ((uint64_t) fun_addr),
