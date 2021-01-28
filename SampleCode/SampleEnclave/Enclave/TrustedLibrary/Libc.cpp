@@ -67,74 +67,72 @@ extern "C" sgx_status_t trts_mmap(size_t start, size_t size);
 extern "C" sgx_status_t trts_munmap(size_t start, size_t size);
 
 extern uint8_t __ImageBase;
+
 #if 1
 void __attribute__((section(".nestee_entry"), unused))
-NesTEE_Entry(size_t page, size_t *stack, size_t *fun_addr, size_t *secinfo)
+NesTEE_Entry(size_t page, size_t *stack, size_t *fun_addr, size_t *secinfo_RWX, size_t *secinfo_R)
 {
    __asm__ __volatile__(
         // Unprotect NesTEE Page
-        "movq $0x6, %%rax \n"
-        "movq %3, %%rbx \n" //TODO: verify this line is correct SECINFO_RWX
-        "movq %%rdi, %%rcx \n"
+        "movq $0x6, %%rax \n" //setting
+        "movq %3, %%rbx \n" //page
+        "movq %%rdi, %%rcx \n" //secinfo
         "ENCLU \n"
         
         //Check ENCLU parameters
         "cmp $0x6, %%rax\n" 
-        "jne crash_entry \n"
-        "cmp %0, %%rcx \n" //TODO: (ask) This should be %0 but when we do the compiler tries to compare %rax instead of %rdi, executing jne and crashing - This occurs when we use "r" instead of D and S, WHY???
-        "jne crash_entry \n"
+        // "jne crash_entry \n"
+        "cmp %%rdi, %%rcx \n" 
+        // "jne crash_entry \n"
         
         // Set up secure stack
         "movq %%rsp, %%rbx \n"
         "movq %1, %%rsp \n"
         "push %%rbx \n"
 
+        // // must save params prior to call as they are not saved across calls
+        // "push %%rdi\n"
+        // "push %%rsi \n"
+        // "push %%r9 \n"
+
         // Go to NesTEE LibOS
-        "jmp %2 \n" 
-        :: "D" ((uint64_t) page), 
-        "S" ((uint64_t) stack), 
-        "r" ((uint64_t) fun_addr),
-        "r" ((uint64_t) secinfo):
-        );
-        __asm__ __volatile__("crash_entry: HLT \n");
-        // TODO: ask whether we need 'PR' SECINFO.Flags to be set to 1 (p.19 of manual)
-}
+        "call %2 \n" 
 
-// void* ptr = (void*) &NesTEE_LibOS_Start()
-//unsigned long long emodpr = 0x0e;
+        // // Pop registers from stack
+        // "pop %%r9 \n"
+        // "pop %%rsi \n"
+        // "pop %%rdi\n"
 
-void __attribute__((section(".nestee_exit"), unused))
-NesTEE_Exit(size_t page, size_t *stack)
-{
-   __asm__ __volatile__(
+        // // protect the NesTEE page using saved registers
+        // "movq $0x6, %%rax \n"
+        // "movq %%r9, %%rbx \n"
+        // "movq %%rdi, %%rcx \n"
+        // "ENCLU \n"
 
-        // protect the NesTEE page
-        "movq $0x0e, %%rax \n"
-        "movq $1, %%rbx \n"
-        "movq %0, %%rcx \n"
-        "ENCLU \n"
-
-        // check enclu parameters
-        "cmp $0x0e, %%rax \n"
-        "jne crash_exit \n"
-        "cmp $1, %%rbx \n"
-        "jne crash_exit \n"
-        "cmp %0, %%rcx \n"
-        "jne crash_exit \n"
+        // // check enclu parameters
+        // "cmp $0x0e, %%rax \n"
+        // // "jne crash_exit \n"
+        // "cmp %%r14, %%rbx \n"
+        // // "jne crash_exit \n"
+        // "cmp %%r12, %%rcx \n"
+        // // "jne crash_exit \n"
 
         // restore user stack
         "pop %%rbx \n"
-        "movq $0x0e, %%rsp \n"
+        "movq %%rbx, %%rsp \n"
 
-        //return to caller
-        "ret \n"
-        :: "r" (page), "r" ((uint64_t) stack):
-        ); 
-
-        __asm__ __volatile__("crash_exit: HLT \n");
+        :: "D" ((uint64_t) page), 
+        "S" ((uint64_t) stack), 
+        "r" ((uint64_t) fun_addr),
+        "r" ((uint64_t) secinfo_RWX),
+        "r" ((uint64_t) secinfo_R):
+        );
 }
-
 #endif
+// void* ptr = (void*) &NesTEE_LibOS_Start()
+//unsigned long long emodpr = 0x0e;
+
+
 void
 __attribute__((section(".security_monitor"), unused))
 helloWorld (void)
@@ -158,13 +156,14 @@ void ecall_test_mprotect(void)
     //align to page boundary & protect
     stack = (stack +  4096 - 1) & ~(4096  - 1);
     trts_mprotect(stack, 4096, 0x7);    
-
     trts_mprotect(start, size, 0x7);
+
     printf("Addr: %zx\n", start);
-    sgx_arch_sec_info_t secinfo;
-    memset(&secinfo, 0, sizeof(sgx_arch_sec_info_t));
-    secinfo.flags = 0x7;
-    NesTEE_Entry(start, (size_t *) stack, (size_t *) hello_world_ptr, (size_t *) &secinfo);
-    // helloWorld();
-    NesTEE_Exit(start, (size_t *) stack);
+    sgx_arch_sec_info_t secinfo_RWX;
+    sgx_arch_sec_info_t secinfo_R;
+    memset(&secinfo_RWX, 0, sizeof(sgx_arch_sec_info_t));
+    memset(&secinfo_R, 0, sizeof(sgx_arch_sec_info_t));
+    secinfo_RWX.flags = 0x7;
+    secinfo_R.flags = 0x1;
+    NesTEE_Entry(start, (size_t *) stack, (size_t *) hello_world_ptr, (size_t *) &secinfo_RWX, (size_t *) &secinfo_R);
 }

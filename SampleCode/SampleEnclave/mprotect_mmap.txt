@@ -1,0 +1,34 @@
+Page Size: 1
+mprotect time without ocall: 0.000033 s
+mprotect time confidence interval: 0.000000 s
+
+Page Size: 2
+mprotect time without ocall: 0.000077 s
+mprotect time confidence interval: 0.000000 s
+
+Page Size: 4
+mprotect time without ocall: 0.000162 s
+mprotect time confidence interval: 0.000000 s
+
+Page Size: 8
+mprotect time without ocall: 0.000332 s
+mprotect time confidence interval: 0.000000 s
+
+Page Size: 16
+mprotect time without ocall: 0.000672 s
+mprotect time confidence interval: 0.000000 s
+
+Page Size: 32
+mprotect time without ocall: 0.001356 s
+mprotect time confidence interval: 0.000008 s
+
+Page Size: 64
+mprotect time without ocall: 0.002711 s
+mprotect time confidence interval: 0.000001 s
+
+Page Size: 128
+mprotect time without ocall: 0.005416 s
+mprotect time confidence interval: 0.000010 s
+
+doneInfo: SampleEnclave successfully returned.
+Enter a character before exit ...
