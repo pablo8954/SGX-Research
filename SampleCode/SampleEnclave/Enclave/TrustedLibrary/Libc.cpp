@@ -90,32 +90,32 @@ NesTEE_Entry(size_t page, size_t *stack, size_t *fun_addr, size_t *secinfo_RWX, 
         "movq %1, %%rsp \n"
         "push %%rbx \n"
 
-        // // must save params prior to call as they are not saved across calls
-        // "push %%rdi\n"
-        // "push %%rsi \n"
-        // "push %%r9 \n"
+        // must save params prior to call as they are not saved across calls
+        "push %%rdi\n"
+        "push %%rsi \n"
+        "push %%r9 \n"
 
         // Go to NesTEE LibOS
         "call %2 \n" 
 
         // // Pop registers from stack
-        // "pop %%r9 \n"
-        // "pop %%rsi \n"
-        // "pop %%rdi\n"
+        "pop %%r9 \n"
+        "pop %%rsi \n"
+        "pop %%rdi\n"
 
         // // protect the NesTEE page using saved registers
-        // "movq $0x6, %%rax \n"
-        // "movq %%r9, %%rbx \n"
-        // "movq %%rdi, %%rcx \n"
-        // "ENCLU \n"
+        "movq $0x6, %%rax \n"
+        "movq %%r9, %%rbx \n"
+        "movq %%rdi, %%rcx \n"
+        "ENCLU \n"
 
         // // check enclu parameters
-        // "cmp $0x0e, %%rax \n"
-        // // "jne crash_exit \n"
-        // "cmp %%r14, %%rbx \n"
-        // // "jne crash_exit \n"
-        // "cmp %%r12, %%rcx \n"
-        // // "jne crash_exit \n"
+        "cmp $0x0e, %%rax \n"
+        // "jne crash_exit \n"
+        "cmp %%r14, %%rbx \n"
+        // "jne crash_exit \n"
+        "cmp %%r12, %%rcx \n"
+        // "jne crash_exit \n"
 
         // restore user stack
         "pop %%rbx \n"
@@ -137,7 +137,7 @@ void
 __attribute__((section(".security_monitor"), unused))
 helloWorld (void)
 {
-    printf("HELLO WORLD");
+    printf("HELLO Pablo");
 }
 
 void ecall_test_mprotect(void)
@@ -167,3 +167,9 @@ void ecall_test_mprotect(void)
     secinfo_R.flags = 0x1;
     NesTEE_Entry(start, (size_t *) stack, (size_t *) hello_world_ptr, (size_t *) &secinfo_RWX, (size_t *) &secinfo_R);
 }
+
+/*
+
+Libc.cpp, call entry/exit code passing hello_world_parameter -> trts_pic.S -> call hello world from libc.cpp param -> finish up eexit code and return
+
+*/
