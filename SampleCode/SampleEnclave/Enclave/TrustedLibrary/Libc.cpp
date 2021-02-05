@@ -74,14 +74,14 @@ void perform_test(size_t start, size_t size)
 {
     memset((void *) start, 0, size);
 
-    long double trials = 1000.0;
+    long  trials = 1000.0;
 
-    long double* trial_times = (long double*)malloc((int)trials * sizeof(long double));
-    long double* ocall_times = (long double*)malloc((int)trials * sizeof(long double));
+    long * trial_times = (long *)malloc((int)trials * sizeof(long ));
+    long * ocall_times = (long *)malloc((int)trials * sizeof(long ));
 
     long start_time[2], end_time[2];
-    long double average_time_mprotect = 0.0;
-    long double average_time_ocall = 0.0;
+    long  average_time_mprotect = 0.0;
+    long  average_time_ocall = 0.0;
 
     /* Time mprotect and overhead */
     for (int i = 0; i < trials; i++)
@@ -100,7 +100,7 @@ void perform_test(size_t start, size_t size)
             i = i -1;
             continue;
         }
-        trial_times[i] = ((end_time[1] - start_time[1]) + (end_time[0] - start_time[0]) / BILLION);
+        trial_times[i] = ((end_time[1] - start_time[1]) * BILLION) + (end_time[0] - start_time[0]);
         average_time_mprotect = average_time_mprotect + trial_times[i] ;
     }
     //get ocall overhead timings
@@ -116,19 +116,19 @@ void perform_test(size_t start, size_t size)
             continue;
         }
         
-        ocall_times[i] = ((end_time[1] - start_time[1]) + (end_time[0] - start_time[0]) / BILLION);
+        ocall_times[i] = ((end_time[1] - start_time[1]) * BILLION) + (end_time[0] - start_time[0]);
         average_time_ocall = average_time_ocall + ocall_times[i];
     }
 
-    //get means
-    long double mprotect_time = average_time_mprotect/trials;
-    long double ocall_time = average_time_ocall/trials;
+    //get averages
+    long mprotect_time = average_time_mprotect/trials;
+    long ocall_time = average_time_ocall/trials;
 
     //compute standard deviation & CI
-    long double mprotect_deviation = 0;
-    long double mprotect_sumsqr = 0;
-    long double ocall_deviation = 0;
-    long double ocall_sumsqr = 0;
+    long mprotect_deviation = 0;
+    long mprotect_sumsqr = 0;
+    long ocall_deviation = 0;
+    long ocall_sumsqr = 0;
 
     for (int i = 0; i < trials; i++)
     {
@@ -138,17 +138,17 @@ void perform_test(size_t start, size_t size)
         ocall_deviation = ocall_times[i] - ocall_time;
         ocall_sumsqr += ocall_deviation * ocall_deviation;
     }
-    long double mprotect_var = mprotect_sumsqr/trials;
-    long double ocall_var = ocall_sumsqr/trials;
+    long mprotect_var = mprotect_sumsqr/trials;
+    long ocall_var = ocall_sumsqr/trials;
 
-    long double mprotect_stddeviation = sqrt(mprotect_var);
-    long double ocall_stddeviation = sqrt(ocall_var);
+    long mprotect_stddeviation = sqrt(mprotect_var);
+    long ocall_stddeviation = sqrt(ocall_var);
 
-    long double CI_mprotect = 1.962 * (mprotect_stddeviation/sqrt(trials));
-    long double CI_Ocall = 1.962 * (ocall_stddeviation/sqrt(trials));
+    long CI_mprotect = 1.962 * (mprotect_stddeviation/sqrt(trials));
+    long CI_Ocall = 1.962 * (ocall_stddeviation/sqrt(trials));
 
-    printf("mprotect time without ocall: %Lf s\n", mprotect_time - ocall_time);
-    printf("mprotect time confidence interval: %Lf s\n\n", CI_mprotect);
+    printf("mprotect time without ocall: %lu ns\n", mprotect_time - ocall_time);
+    printf("mprotect time confidence interval: %lu ns\n\n", CI_mprotect);
 }
 
 
