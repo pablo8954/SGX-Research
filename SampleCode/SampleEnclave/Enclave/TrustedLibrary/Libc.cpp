@@ -70,7 +70,7 @@ extern uint8_t __ImageBase;
 
 #if 1
 void __attribute__((section(".nestee_entry"), unused))
-NesTEE_Entry(size_t page, size_t *stack, size_t *fun_addr, size_t *secinfo_RWX, size_t *secinfo_R)
+NesTEE_Entry(size_t page, size_t *stack, size_t *fun_addr, size_t *secinfo_RWX, size_t size)
 {
    __asm__ __volatile__(
         // Unprotect NesTEE Page
@@ -90,55 +90,101 @@ NesTEE_Entry(size_t page, size_t *stack, size_t *fun_addr, size_t *secinfo_RWX, 
         "movq %1, %%rsp \n"
         "push %%rbx \n"
 
-        // must save params prior to call as they are not saved across calls
-        "push %%rdi\n"
-        "push %%rsi \n"
-        "push %%r9 \n"
+        // // must save params prior to call as they are not saved across calls
+        // "push %%rdi\n"
+        // "push %%rsi \n"
+        // "push %%r9 \n"
 
         // Go to NesTEE LibOS
         "call %2 \n" 
 
-        // // Pop registers from stack
-        "pop %%r9 \n"
-        "pop %%rsi \n"
-        "pop %%rdi\n"
+        // // // Pop registers from stack
+        // "pop %%r9 \n"
+        // "pop %%rsi \n"
+        // "pop %%rdi\n"
 
-        // // protect the NesTEE page using saved registers
-        "movq $0x6, %%rax \n"
-        "movq %%r9, %%rbx \n"
-        "movq %%rdi, %%rcx \n"
-        "ENCLU \n"
+        // // // protect the NesTEE page using saved registers
+        // "movq $0x6, %%rax \n"
+        // "movq %%r9, %%rbx \n"
+        // "movq %%rdi, %%rcx \n"
+        // "ENCLU \n"
 
-        // // check enclu parameters
-        "cmp $0x0e, %%rax \n"
-        // "jne crash_exit \n"
-        "cmp %%r14, %%rbx \n"
-        // "jne crash_exit \n"
-        "cmp %%r12, %%rcx \n"
-        // "jne crash_exit \n"
+        // // // check enclu parameters
+        // "cmp $0x0e, %%rax \n"
+        // // "jne crash_exit \n"
+        // "cmp %%r14, %%rbx \n"
+        // // "jne crash_exit \n"
+        // "cmp %%r12, %%rcx \n"
+        // // "jne crash_exit \n"
 
-        // restore user stack
-        "pop %%rbx \n"
-        "movq %%rbx, %%rsp \n"
+        // // restore user stack
+        // "pop %%rbx \n"
+        // "movq %%rbx, %%rsp \n"
 
         :: "D" ((uint64_t) page), 
         "S" ((uint64_t) stack), 
         "r" ((uint64_t) fun_addr),
-        "r" ((uint64_t) secinfo_RWX),
-        "r" ((uint64_t) secinfo_R):
+        "r" ((uint64_t) secinfo_RWX):
         );
+
+        // sgx_status_t ret = SGX_SUCCESS;
+        // const int proc = EDMM_MODPR;
+        // uint64_t epcm_perms = 0x1;
+        // #ifdef SE_SIM
+        //     (void)addr;
+        //     (void)size;
+        //     (void)epcm_perms;
+        //     (void)proc;
+        //     return SGX_SUCCESS;
+        // #else
+        //     sgx_status_t status = SGX_SUCCESS;
+
+        //     ms_change_permissions_ocall_t* ms;
+        //     OCALLOC(ms, ms_change_permissions_ocall_t*, sizeof(*ms));
+
+        //     ms->ms_addr = addr;
+        //     ms->ms_size = size;
+        //     ms->ms_epcm_perms = epcm_perms;
+        //     status = sgx_ocall(proc, ms);
+
+
+        //     sgx_ocfree();
+        //     ret = status
+        // #endif
+        // if (ret != SGX_SUCCESS)
+        //     return ret;
 }
 #endif
-// void* ptr = (void*) &NesTEE_LibOS_Start()
-//unsigned long long emodpr = 0x0e;
+void* ptr = (void*) &NesTEE_LibOS_Start()
+unsigned long long emodpr = 0x0e;
 
 
 void
 __attribute__((section(".security_monitor"), unused))
-helloWorld (void)
+helloWorld (size_t NesTEE_page, size_t *NesTEE_stack, size_t size) //temp libOS code
 {
-    printf("HELLO World");
-    // do ocall here
+    printf("Hello World");
+    
+    /* Lock up NesTEE pages */
+    uint64_t perms = 0x1;
+    //ocall and protect NesTEE pages
+    int rc = -1;
+    size_t page;
+    sgx_status_t ret = SGX_SUCCESS;
+    SE_DECLSPEC_ALIGN(sizeof(sec_info_t)) sec_info_t si;
+
+    //Error return if start or size is not page-aligned or size is zero.
+    if (!IS_PAGE_ALIGNED(start) || (size == 0) || !IS_PAGE_ALIGNED(size))
+        return SGX_ERROR_INVALID_PARAMETER;
+    if (g_sdk_version == SDK_VERSION_2_0)
+    {
+        ret = change_permissions_ocall(start, size, perms, EDMM_MODPR);
+        if (ret != SGX_SUCCESS)
+            return ret;
+    }
+
+    si.flags = perms|SI_FLAG_REG|SI_FLAG_PR;
+    memset(&si.reserved, 0, sizeof(si.reserved));
 }
 
 void ecall_test_mprotect(void)
@@ -166,7 +212,7 @@ void ecall_test_mprotect(void)
     memset(&secinfo_R, 0, sizeof(sgx_arch_sec_info_t));
     secinfo_RWX.flags = 0x7;
     secinfo_R.flags = 0x1;
-    NesTEE_Entry(start, (size_t *) stack, (size_t *) hello_world_ptr, (size_t *) &secinfo_RWX, (size_t *) &secinfo_R);
+    NesTEE_Entry(start, (size_t *) stack, (size_t *) hello_world_ptr, (size_t *) &secinfo_RWX, size);
 }
 
 /*
