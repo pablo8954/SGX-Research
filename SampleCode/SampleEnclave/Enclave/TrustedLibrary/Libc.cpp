@@ -137,7 +137,8 @@ void
 __attribute__((section(".security_monitor"), unused))
 helloWorld (void)
 {
-    printf("HELLO Pablo");
+    printf("HELLO World");
+    // do ocall here
 }
 
 void ecall_test_mprotect(void)
