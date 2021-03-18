@@ -68,6 +68,7 @@ void ecall_sgx_cpuid(int cpuinfo[4], int leaf)
 extern "C" sgx_status_t trts_mprotect(size_t start, size_t size, uint64_t perms);
 extern "C" sgx_status_t trts_mmap(size_t start, size_t size);
 extern "C" sgx_status_t trts_munmap(size_t start, size_t size);
+extern "C" sgx_status_t NesTEE_trts_mprotect(size_t start,size_t size, uint64_t perms);
 
 extern uint8_t __ImageBase;
 
@@ -136,16 +137,21 @@ void
 __attribute__((section(".security_monitor"), unused))
 helloWorld (void)
 {
-    printf("Hello World");
+    //printf("Hello World");
     
     /* Lock up NesTEE pages */
     uint64_t perms = 0x1;
+    
     //ocall and protect NesTEE pages
     int rc = -1;
     sgx_status_t ret = SGX_SUCCESS;
     SE_DECLSPEC_ALIGN(sizeof(sec_info_t)) sec_info_t si;
-   
-    NesTEE_change_permissions_ocall(NesTEE_page, size, EDMM_NESTEE_MODPR);
+    
+    void* hello_world_ptr = (void *)&helloWorld;
+    size_t size = 4096;
+    size_t start = ((uintptr_t)hello_world_ptr + 4096-1) & ~(4096-1);
+
+    NesTEE_trts_mprotect(start, size, EDMM_NESTEE_MODPR);
     
 }
 
