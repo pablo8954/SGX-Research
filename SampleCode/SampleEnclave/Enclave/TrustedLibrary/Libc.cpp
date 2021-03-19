@@ -73,8 +73,18 @@ extern "C" sgx_status_t NesTEE_trts_mprotect(size_t start,size_t size, uint64_t 
 extern uint8_t __ImageBase;
 
 #if 1
+
+void
+__attribute__((section(".security_monitor"), unused))
+helloWorld (void)
+{
+   printf("Hello World");
+    
+}
+
+
 void __attribute__((section(".nestee_entry"), unused))
-NesTEE_Gateway(size_t page, size_t *stack, size_t *fun_addr, size_t *secinfo_RWX, size_t *secinfo_R, size_t size)
+NesTEE_Gateway(size_t page, size_t *stack, size_t *fun_addr, size_t *secinfo_RWX, size_t *secinfo_R)
 {
    __asm__ __volatile__(
         // Unprotect NesTEE Page
@@ -97,10 +107,32 @@ NesTEE_Gateway(size_t page, size_t *stack, size_t *fun_addr, size_t *secinfo_RWX
         // must save params prior to call as they are not saved across calls
         "push %%rdi\n"
         "push %%r9 \n"
-        	
-        // Go to NesTEE LibOS
-        "call %2 \n" 
 
+	:: "D" ((uint64_t) page),
+	   "S" ((uint64_t) stack),
+	   "r" ((uint64_t) fun_addr),
+	   "r" ((uint64_t) secinfo_RWX),
+	   "r" ((uint64_t) secinfo_R):
+	);
+
+    helloWorld();
+
+     /* Lock up NesTEE pages */
+    uint64_t perms = 0x1;
+    
+    //ocall and protect NesTEE pages
+    int rc = -1;
+    sgx_status_t ret = SGX_SUCCESS;
+    SE_DECLSPEC_ALIGN(sizeof(sec_info_t)) sec_info_t si;
+   
+    // fetch info from linker 
+    void* hello_world_ptr = (void *)&helloWorld;
+    size_t size = 4096;
+    size_t start = ((uintptr_t)hello_world_ptr + 4096-1) & ~(4096-1);
+
+    NesTEE_trts_mprotect(start, size, perms); 
+    
+    __asm__ __volatile__(   
         // Pop registers from stack
         "pop %%r9 \n"
         "pop %%rdi \n"
@@ -127,33 +159,11 @@ NesTEE_Gateway(size_t page, size_t *stack, size_t *fun_addr, size_t *secinfo_RWX
         "S" ((uint64_t) stack), 
         "r" ((uint64_t) fun_addr),
         "r" ((uint64_t) secinfo_RWX),
-	"r" ((uint64_t) secinfo_R),
-	"r"((uint64_t) size):
+	"r" ((uint64_t) secinfo_R):
         );  
 }
 #endif
 
-void
-__attribute__((section(".security_monitor"), unused))
-helloWorld (void)
-{
-    //printf("Hello World");
-    
-    /* Lock up NesTEE pages */
-    uint64_t perms = 0x1;
-    
-    //ocall and protect NesTEE pages
-    int rc = -1;
-    sgx_status_t ret = SGX_SUCCESS;
-    SE_DECLSPEC_ALIGN(sizeof(sec_info_t)) sec_info_t si;
-    
-    void* hello_world_ptr = (void *)&helloWorld;
-    size_t size = 4096;
-    size_t start = ((uintptr_t)hello_world_ptr + 4096-1) & ~(4096-1);
-
-    NesTEE_trts_mprotect(start, size, EDMM_NESTEE_MODPR);
-    
-}
 
 void ecall_test_mprotect(void)
 {
@@ -179,5 +189,5 @@ void ecall_test_mprotect(void)
     secinfo_RWX.flags = 0x7;
     secinfo_R.flags = 0x1;
     
-    NesTEE_Gateway(start, (size_t *) stack, (size_t *) hello_world_ptr, (size_t *) &secinfo_RWX, (size_t *) &secinfo_R, size);
+    NesTEE_Gateway(start, (size_t *) stack, (size_t *) hello_world_ptr, (size_t *) &secinfo_RWX, (size_t *) &secinfo_R);
 }
