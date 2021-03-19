@@ -114,7 +114,7 @@ NesTEE_Gateway(size_t page, size_t *stack, size_t *fun_addr, size_t *secinfo_RWX
 	   "r" ((uint64_t) secinfo_RWX),
 	   "r" ((uint64_t) secinfo_R):
 	);
-
+    // enter NesTEE LibOS 
     helloWorld();
 
      /* Lock up NesTEE pages */
