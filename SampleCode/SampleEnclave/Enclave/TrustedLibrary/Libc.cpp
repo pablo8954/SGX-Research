@@ -78,8 +78,7 @@ void
 __attribute__((section(".security_monitor"), unused))
 helloWorld (void)
 {
-   printf("Hello World");
-    
+   printf("Hello World"); 
 }
 
 
@@ -190,4 +189,5 @@ void ecall_test_mprotect(void)
     secinfo_R.flags = 0x1;
     
     NesTEE_Gateway(start, (size_t *) stack, (size_t *) hello_world_ptr, (size_t *) &secinfo_RWX, (size_t *) &secinfo_R);
+   // helloWorld();
 }
