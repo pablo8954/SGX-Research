@@ -32,6 +32,7 @@
 
 #include <string.h>
 #include <time.h>
+#include <math.h>
 
 #include "sgx_cpuid.h"
 #include "../../../../linux-sgx/common/inc/internal/rts.h"
@@ -85,81 +86,194 @@ helloWorld (void)
 void __attribute__((section(".nestee_entry"), unused))
 NesTEE_Gateway(size_t page, size_t *stack, size_t *fun_addr, size_t *secinfo_RWX, size_t *secinfo_R)
 {
-   __asm__ __volatile__(
-        // Unprotect NesTEE Page
-        "movq $0x6, %%rax \n" //setting
-        "movq %3, %%rbx \n" //sec info
-        "movq %%rdi, %%rcx \n" //address of the destination EPC page
-        "ENCLU \n"
-        
-        //Check ENCLU parameters
-        "cmp $0x6, %%rax\n" 
-        // "jne crash_entry \n"
-        "cmp %%rdi, %%rcx \n" 
-        // "jne crash_entry \n"
-        
-        // Set up secure stack
-        "movq %%rsp, %%rbx \n"
-        "movq %1, %%rsp \n"
-        "push %%rbx \n"
-
-        // must save params prior to call as they are not saved across calls
-        "push %%rdi\n"
-        "push %%r9 \n"
-
-	:: "D" ((uint64_t) page),
-	   "S" ((uint64_t) stack),
-	   "r" ((uint64_t) fun_addr),
-	   "r" ((uint64_t) secinfo_RWX),
-	   "r" ((uint64_t) secinfo_R):
-	);
-    // enter NesTEE LibOS 
-    helloWorld();
-
-     /* Lock up NesTEE pages */
-    uint64_t perms = 0x1;
-    
-    //ocall and protect NesTEE pages
-    int rc = -1;
-    sgx_status_t ret = SGX_SUCCESS;
-    SE_DECLSPEC_ALIGN(sizeof(sec_info_t)) sec_info_t si;
+   //set up timing experiment
+   long trials = 1000.0;
+   long* entry_gate_times = (long *)malloc((int)trials * sizeof(long));
+   long* exit_gate_times = (long *)malloc((int)trials * sizeof(long));
    
-    // fetch info from linker 
-    void* hello_world_ptr = (void *)&helloWorld;
-    size_t size = 4096;
-    size_t start = ((uintptr_t)hello_world_ptr + 4096-1) & ~(4096-1);
+   long start_time[2], end_time[2];
+   long average_time_entry_gate = 0.0;
+   long average_time_exit_gate = 0.0;
 
-    NesTEE_trts_mprotect(start, size, perms); 
-    
-    __asm__ __volatile__(   
-        // Pop registers from stack
-        "pop %%r9 \n"
-        "pop %%rdi \n"
+   for (int i = 0; i < trials; i++)
+   {
+   	ocall_gettime(start_time);
+	__asm__ __volatile__(
+		// Unprotect NesTEE Page
+		"movq $0x6, %%rax \n" //setting
+		"movq %3, %%rbx \n" //sec info
+		"movq %%rdi, %%rcx \n" //address of the destination EPC page
+		"ENCLU \n"
+		
+		//Check ENCLU parameters
+		"cmp $0x6, %%rax\n" 
+		// "jne crash_entry \n"
+		"cmp %%rdi, %%rcx \n" 
+		// "jne crash_entry \n"
+		
+		// Set up secure stack
+		"movq %%rsp, %%rbx \n"
+		"movq %1, %%rsp \n"
+		"push %%rbx \n"
 
-        // protect the NesTEE page using saved registers
-        "movq $0x5, %%rax \n" //setting
-        "movq %%r9, %%rbx \n" //sec info
-        "movq %%rdi, %%rcx \n" //address of destination EPC page
-        "ENCLU \n"
+		// must save params prior to call as they are not saved across calls
+		"push %%rdi\n"
+		"push %%r9 \n"
 
-        // check enclu parameters
-        "cmp $0x5, %%rax \n"
-        // "jne crash_exit \n"
-        "cmp %%r9, %%rbx \n"
-        // "jne crash_exit \n"
-        "cmp %%rdi, %%rcx \n"
-        // "jne crash_exit \n"
-
-        // restore user stack
-        "pop %%rbx \n"
-        "movq %%rbx, %%rsp \n"
-
-        :: "D" ((uint64_t) page), 
-        "S" ((uint64_t) stack), 
-        "r" ((uint64_t) fun_addr),
-        "r" ((uint64_t) secinfo_RWX),
+		:: "D" ((uint64_t) page),
+		   "S" ((uint64_t) stack),
+		   "r" ((uint64_t) fun_addr),
+		   "r" ((uint64_t) secinfo_RWX),
+		   "r" ((uint64_t) secinfo_R):
+		);
+	ocall_gettime(end_time);
+        
+	__asm__ __volatile(
+	    // pop values from stack after test to reset and prevent stack overflow
+	    "pop %%r9 \n"
+	    "pop %%rdi\n"
+	    "pop %%rbx\n"
+	    
+	:: "D" ((uint64_t) page), 
+	"S" ((uint64_t) stack), 
+	"r" ((uint64_t) fun_addr),
+	"r" ((uint64_t) secinfo_RWX),
 	"r" ((uint64_t) secinfo_R):
-        );  
+	    );
+			
+	if (end_time[1] - start_time[1] < 0 || end_time[0] - start_time[0] < 0)
+	{
+	   // repeat attempted trial if data is invalid
+	   i = i -1;
+	   continue;
+	}
+	entry_gate_times[i] = ((end_time[1] - start_time[1]) * BILLION) + (end_time[0] - start_time[0]);
+	average_time_entry_gate = average_time_entry_gate + entry_gate_times[i];
+   }
+      
+    // enter NesTEE LibOS 
+    //helloWorld();
+  
+
+   __asm__ __volatile(
+       // push values to stack for next set of testing
+       "push %%rbx \n"
+       "push %%rdi\n"
+       "push %%r9 \n"
+ 
+	:: "D" ((uint64_t) page), 
+	"S" ((uint64_t) stack), 
+	"r" ((uint64_t) fun_addr),
+	"r" ((uint64_t) secinfo_RWX),
+	"r" ((uint64_t) secinfo_R):
+       );
+
+   // time exit gate code 
+   for (int i = 0; i < trials; i++)
+   {
+	    ocall_gettime(start_time);
+	    
+	    /* Lock up NesTEE pages */
+	    uint64_t perms = 0x1;
+	    
+	    //ocall and protect NesTEE pages
+	    int rc = -1;
+	    sgx_status_t ret = SGX_SUCCESS;
+	    SE_DECLSPEC_ALIGN(sizeof(sec_info_t)) sec_info_t si;
+	   
+	    // fetch info from linker 
+	    void* hello_world_ptr = (void *)&helloWorld;
+	    size_t size = 4096;
+	    size_t start = ((uintptr_t)hello_world_ptr + 4096-1) & ~(4096-1);
+
+	    NesTEE_trts_mprotect(start, size, perms); 
+	    
+	    __asm__ __volatile__(   
+		// Pop registers from stack
+		"pop %%r9 \n"
+		"pop %%rdi \n"
+
+		// protect the NesTEE page using saved registers
+		"movq $0x5, %%rax \n" //setting
+		"movq %%r9, %%rbx \n" //sec info
+		"movq %%rdi, %%rcx \n" //address of destination EPC page
+		//"ENCLU \n"
+
+		// check enclu parameters
+		"cmp $0x5, %%rax \n"
+		// "jne crash_exit \n"
+		"cmp %%r9, %%rbx \n"
+		// "jne crash_exit \n"
+		"cmp %%rdi, %%rcx \n"
+		// "jne crash_exit \n"
+
+		// restore user stack
+		"pop %%rbx \n"
+		"movq %%rbx, %%rsp \n"
+
+		:: "D" ((uint64_t) page), 
+		"S" ((uint64_t) stack), 
+		"r" ((uint64_t) fun_addr),
+		"r" ((uint64_t) secinfo_RWX),
+		"r" ((uint64_t) secinfo_R):
+		);  
+	   
+		ocall_gettime(end_time);
+		
+		//reset stack for next iteration
+	    __asm__ __volatile__(
+	        // push old values to stack
+		"push %%rbx\n"
+	        "push %%rdi\n"
+		"push %%r9 \n"
+
+		:: "D" ((uint64_t) page), 
+		"S" ((uint64_t) stack), 
+		"r" ((uint64_t) fun_addr),
+		"r" ((uint64_t) secinfo_RWX),
+		"r" ((uint64_t) secinfo_R):
+		);
+
+		if (end_time[1] - start_time[1] < 0 || end_time[0] - start_time[0] < 0)
+		{
+		   // repeat attempted trial if data is invalid
+		   i = i -1;
+		   continue;
+		}
+		exit_gate_times[i] = ((end_time[1] - start_time[1]) * BILLION) + (end_time[0] - start_time[0]);
+		average_time_exit_gate = average_time_exit_gate + exit_gate_times[i];
+   }
+
+	//get averages
+	long entry_gate_time = average_time_entry_gate/trials;
+	long exit_gate_time = average_time_exit_gate/trials;
+
+	//compute standard deviation & CI
+	long entry_deviation = 0;
+	long entry_sumsqr = 0;
+	long exit_deviation = 0;
+	long exit_sumsqr = 0;
+	for (int i = 0; i < trials; i++)
+	     {
+	       entry_deviation = entry_gate_times[i] - entry_gate_time;
+	       entry_sumsqr += entry_deviation * entry_deviation;
+	       exit_deviation = exit_gate_times[i] - exit_gate_time;
+	       exit_sumsqr += exit_deviation * exit_deviation;
+	     }
+	long entry_var = entry_sumsqr/trials;
+	long exit_var = exit_sumsqr/trials;
+
+	long entry_stddeviation = sqrt(entry_var);
+	long exit_stddeviation = sqrt(exit_var);
+
+	long CI_entry = 1.962 * (entry_stddeviation/sqrt(trials));
+	long CI_exit = 1.962 * (exit_stddeviation/sqrt(trials));
+
+	printf("\n\nEntry Gate Timing: %lu ns\n", entry_gate_time);
+	printf("Exit Gate Timing: %lu ns\n", exit_gate_time);
+
+	printf("Entry Gate Confidence Interval: %lu ns\n", CI_entry);
+	printf("Exit Gate Confidence Interval: %lu ns\n\n", CI_exit);
 }
 #endif
 

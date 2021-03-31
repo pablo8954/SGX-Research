@@ -213,7 +213,7 @@ void ocall_nothing(void) {}
 void ocall_gettime(long time_array[2])
 {
     struct timespec time;
-    clock_gettime(CLOCK_REALTIME, &time);
+    clock_gettime(CLOCK_MONOTONIC, &time);
     time_array[0] = time.tv_nsec;
     time_array[1] = time.tv_sec;
 }
