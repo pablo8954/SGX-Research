@@ -178,6 +178,9 @@ void ocall_print_string(const char *str)
 }
 
 
+//[ ! -d /opt/intel/sgxsdk ] || /opt/intel/sgxsdk/uninstall.sh
+//[ ! -d /opt/intel/sgxpsw ] || /opt/intel/sgxpsw/uninstall.sh
+
 /* Application entry */
 int SGX_CDECL main(int argc, char *argv[])
 {

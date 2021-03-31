@@ -34,11 +34,14 @@
 #include <time.h>
 
 #include "sgx_cpuid.h"
+#include "../../../../linux-sgx/common/inc/internal/rts.h"
+#include "../../../../linux-sgx/sdk/trts/trts_emodpr.h"
+#include "../../../../linux-sgx/common/inc/internal/arch.h"
 
 #include "sgx_trts.h"
 #include "../Enclave.h"
 #include "Enclave_t.h"
-
+#include "sgx_arch.h"
 #define BILLION  1000000000.0
 
 /* ecall_malloc_free:
@@ -65,89 +68,126 @@ void ecall_sgx_cpuid(int cpuinfo[4], int leaf)
 extern "C" sgx_status_t trts_mprotect(size_t start, size_t size, uint64_t perms);
 extern "C" sgx_status_t trts_mmap(size_t start, size_t size);
 extern "C" sgx_status_t trts_munmap(size_t start, size_t size);
+extern "C" sgx_status_t NesTEE_trts_mprotect(size_t start,size_t size, uint64_t perms);
 
 extern uint8_t __ImageBase;
 
+#if 1
 
-void perform_test(size_t start, size_t size)
+void
+__attribute__((section(".security_monitor"), unused))
+helloWorld (void)
 {
-    memset((void *) start, 0, size);
-
-    long start_time[2], end_time[2];
-    long double average_time_mprotect = 0.0;
-    long double average_time_ocall = 0.0;
-    long double trials = 10000.0;
-
-    /* Time mprotect and overhead */
-    for (int i = 0; i < trials; i++)
-    {
-        //get mprotect timings
-        ocall_gettime(start_time);
-        // trts_mprotect(start, size, 0x4);
-        trts_mprotect(start, size, 0x7);
-        trts_munmap(start, size);
-        trts_mmap(start, size);
-        ocall_gettime(end_time);
-
-        if (end_time[1] - start_time[1] < 0 || end_time[0] - start_time[0] < 0)
-        {
-            i = i -1;
-            continue;
-        }
-
-        average_time_mprotect = average_time_mprotect + ((end_time[1] - start_time[1]) + (end_time[0] - start_time[0]) / BILLION);
-
-    }
-    //get ocall overhead timings
-    for (int i = 0; i < trials; i++)
-    {
-        ocall_gettime(start_time);
-        ocall_nothing();
-        ocall_gettime(end_time);
-        if (end_time[1] - start_time[1] < 0 || end_time[0] - start_time[0] < 0)
-        {
-            i = i -1;
-            continue;
-        }
-        average_time_ocall = average_time_ocall + ((end_time[1] - start_time[1]) + (end_time[0] - start_time[0]) / BILLION);
-    }
-
-    long double mprotect_time = average_time_mprotect/trials;
-    long double ocall_time = average_time_ocall/trials;
-
-    // printf("\nAverage trts_mprotect time: %Lf s \n", mprotect_time);
-    // printf("Average ocall time: %Lf s\n", ocall_time);
-    printf("mprotect time without ocall: %Lf s\n\n", mprotect_time - ocall_time);
+   printf("Hello World"); 
 }
 
 
-void test_entry(void)
+void __attribute__((section(".nestee_entry"), unused))
+NesTEE_Gateway(size_t page, size_t *stack, size_t *fun_addr, size_t *secinfo_RWX, size_t *secinfo_R)
 {
-    printf("HELLO WORLD");
+   __asm__ __volatile__(
+        // Unprotect NesTEE Page
+        "movq $0x6, %%rax \n" //setting
+        "movq %3, %%rbx \n" //sec info
+        "movq %%rdi, %%rcx \n" //address of the destination EPC page
+        "ENCLU \n"
+        
+        //Check ENCLU parameters
+        "cmp $0x6, %%rax\n" 
+        // "jne crash_entry \n"
+        "cmp %%rdi, %%rcx \n" 
+        // "jne crash_entry \n"
+        
+        // Set up secure stack
+        "movq %%rsp, %%rbx \n"
+        "movq %1, %%rsp \n"
+        "push %%rbx \n"
+
+        // must save params prior to call as they are not saved across calls
+        "push %%rdi\n"
+        "push %%r9 \n"
+
+	:: "D" ((uint64_t) page),
+	   "S" ((uint64_t) stack),
+	   "r" ((uint64_t) fun_addr),
+	   "r" ((uint64_t) secinfo_RWX),
+	   "r" ((uint64_t) secinfo_R):
+	);
+    // enter NesTEE LibOS 
+    helloWorld();
+
+     /* Lock up NesTEE pages */
+    uint64_t perms = 0x1;
+    
+    //ocall and protect NesTEE pages
+    int rc = -1;
+    sgx_status_t ret = SGX_SUCCESS;
+    SE_DECLSPEC_ALIGN(sizeof(sec_info_t)) sec_info_t si;
+   
+    // fetch info from linker 
+    void* hello_world_ptr = (void *)&helloWorld;
+    size_t size = 4096;
+    size_t start = ((uintptr_t)hello_world_ptr + 4096-1) & ~(4096-1);
+
+    NesTEE_trts_mprotect(start, size, perms); 
+    
+    __asm__ __volatile__(   
+        // Pop registers from stack
+        "pop %%r9 \n"
+        "pop %%rdi \n"
+
+        // protect the NesTEE page using saved registers
+        "movq $0x5, %%rax \n" //setting
+        "movq %%r9, %%rbx \n" //sec info
+        "movq %%rdi, %%rcx \n" //address of destination EPC page
+        "ENCLU \n"
+
+        // check enclu parameters
+        "cmp $0x5, %%rax \n"
+        // "jne crash_exit \n"
+        "cmp %%r9, %%rbx \n"
+        // "jne crash_exit \n"
+        "cmp %%rdi, %%rcx \n"
+        // "jne crash_exit \n"
+
+        // restore user stack
+        "pop %%rbx \n"
+        "movq %%rbx, %%rsp \n"
+
+        :: "D" ((uint64_t) page), 
+        "S" ((uint64_t) stack), 
+        "r" ((uint64_t) fun_addr),
+        "r" ((uint64_t) secinfo_RWX),
+	"r" ((uint64_t) secinfo_R):
+        );  
 }
+#endif
+
 
 void ecall_test_mprotect(void)
 {
-    // void* ptr = (void*) &test_entry;
+    void* hello_world_ptr = (void *) &helloWorld; //test entry function
+    size_t size = 4096;
 
-    // size_t size = 4096;
-    // //align start to page boundary 
-    // size_t start = ((uintptr_t)ptr +  4096 - 1) & ~(4096  - 1);
-    // trts_mprotect(start, size*2, 0x7);
-    // test_entry();
+    //align start to page boundary 
+    size_t start = ((uintptr_t)hello_world_ptr +  4096 - 1) & ~(4096  - 1);
 
+    /* protect a single page, then add it to the ecall_test_mprotect */
+    // allocate the extra page
+    size_t stack = (size_t) malloc(4096);
+    //align to page boundary & protect
+    stack = (stack +  4096 - 1) & ~(4096  - 1);
+    trts_mprotect(stack, 4096, 0x7);    
+    trts_mprotect(start, size, 0x7);
 
-
-    //allocate pages
-    size_t start = (size_t) malloc(4096 * 129); //allocate 256 pages - reuse pages for 1, 2, 4, 8, 16, .... 
-
-    //align start to page boundary
-    start = (start +  4096 - 1) & ~(4096  - 1);
-
-    size_t size[8] = {4096, 4096*2, 4096 * 4, 4096 *8,4096 *16,4096 *32,4096 *64, 4096 * 128};
-    for (int i = 0; i < 8; i++)
-    {
-        perform_test(start, size[i]);
-    }
-    // free malloc space
+    // printf("Addr: %zx\n", start);
+    sgx_arch_sec_info_t secinfo_RWX;
+    sgx_arch_sec_info_t secinfo_R;
+    memset(&secinfo_RWX, 0, sizeof(sgx_arch_sec_info_t));
+    memset(&secinfo_R, 0, sizeof(sgx_arch_sec_info_t));
+    secinfo_RWX.flags = 0x7;
+    secinfo_R.flags = 0x1;
+    
+    NesTEE_Gateway(start, (size_t *) stack, (size_t *) hello_world_ptr, (size_t *) &secinfo_RWX, (size_t *) &secinfo_R);
+   // helloWorld();
 }
