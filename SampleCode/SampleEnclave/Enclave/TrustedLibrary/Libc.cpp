@@ -73,129 +73,16 @@ extern "C" sgx_status_t NesTEE_trts_mprotect(size_t start,size_t size, uint64_t 
 
 extern uint8_t __ImageBase;
 
-#if 1
-
-void
-__attribute__((section(".security_monitor"), unused))
-helloWorld (void)
+void helloWorld (void)
 {
    // perform ocall to do something 
    // TEST CASE: READ A FILE USING OCALLS 
    ocall_nothing();
-   //printf("Hello World");
+
 }
-
-
-void __attribute__((section(".nestee_entry"), unused))
-NesTEE_Gateway(size_t page, size_t *stack, size_t *fun_addr, size_t *secinfo_RWX, size_t *secinfo_R)
-{
-      
-   	__asm__ __volatile__(
-		// Unprotect NesTEE Page
-		"movq $0x6, %%rax \n" //setting
-		"movq %3, %%rbx \n" //sec info
-		"movq %%rdi, %%rcx \n" //address of the destination EPC page
-		"ENCLU \n"
-		
-		//Check ENCLU parameters
-		"cmp $0x6, %%rax\n" 
-		// "jne crash_entry \n"
-		"cmp %%rdi, %%rcx \n" 
-		// "jne crash_entry \n"
-		
-		// Set up secure stack
-		"movq %%rsp, %%rbx \n"
-		"movq %1, %%rsp \n"
-		"push %%rbx \n"
-
-		// must save params prior to call as they are not saved across calls
-		"push %%rdi\n"
-		"push %%r9 \n"
-
-		:: "D" ((uint64_t) page),
-		   "S" ((uint64_t) stack),
-		   "r" ((uint64_t) fun_addr),
-		   "r" ((uint64_t) secinfo_RWX),
-		   "r" ((uint64_t) secinfo_R):
-		);
-		
-
-      
-    // enter NesTEE LibOS 
-    helloWorld();
-         
-	    /* Lock up NesTEE pages */
-	    uint64_t perms = 0x1;
-	    
-	    //ocall and protect NesTEE pages
-	    int rc = -1;
-	    sgx_status_t ret = SGX_SUCCESS;
-	    SE_DECLSPEC_ALIGN(sizeof(sec_info_t)) sec_info_t si;
-	   
-	    // fetch info from linker 
-	    void* hello_world_ptr = (void *)&helloWorld;
-	    size_t size = 4096;
-	    size_t start = ((uintptr_t)hello_world_ptr + 4096-1) & ~(4096-1);
-
-	    NesTEE_trts_mprotect(start, size, perms); 
-	    
-	    __asm__ __volatile__(   
-		// Pop registers from stack
-		"pop %%r9 \n"
-		"pop %%rdi \n"
-
-		// protect the NesTEE page using saved registers
-		"movq $0x5, %%rax \n" //setting
-		"movq %%r9, %%rbx \n" //sec info
-		"movq %%rdi, %%rcx \n" //address of destination EPC page
-		//"ENCLU \n"
-
-		// check enclu parameters
-		"cmp $0x5, %%rax \n"
-		// "jne crash_exit \n"
-		"cmp %%r9, %%rbx \n"
-		// "jne crash_exit \n"
-		"cmp %%rdi, %%rcx \n"
-		// "jne crash_exit \n"
-
-		// restore user stack
-		"pop %%rbx \n"
-		"movq %%rbx, %%rsp \n"
-
-		:: "D" ((uint64_t) page), 
-		"S" ((uint64_t) stack), 
-		"r" ((uint64_t) fun_addr),
-		"r" ((uint64_t) secinfo_RWX),
-		"r" ((uint64_t) secinfo_R):
-		);  
-}
-#endif
-
 
 void ecall_test_mprotect(void)
 {
-    void* hello_world_ptr = (void *) &helloWorld; //test entry function
-    size_t size = 4096;
-
-    //align start to page boundary 
-    size_t start = ((uintptr_t)hello_world_ptr +  4096 - 1) & ~(4096  - 1);
-
-    /* protect a single page, then add it to the ecall_test_mprotect */
-    // allocate the extra page
-    size_t stack = (size_t) malloc(4096);
-    //align to page boundary & protect
-    stack = (stack +  4096 - 1) & ~(4096  - 1);
-    trts_mprotect(stack, 4096, 0x7);    
-    trts_mprotect(start, size, 0x7);
-
-    // printf("Addr: %zx\n", start);
-    sgx_arch_sec_info_t secinfo_RWX;
-    sgx_arch_sec_info_t secinfo_R;
-    memset(&secinfo_RWX, 0, sizeof(sgx_arch_sec_info_t));
-    memset(&secinfo_R, 0, sizeof(sgx_arch_sec_info_t));
-    secinfo_RWX.flags = 0x7;
-    secinfo_R.flags = 0x1;
-    
     //set up timing experiment
     long trials = 1000.0;
     long* execution_time = (long *)malloc((int)trials * sizeof(long));
@@ -206,7 +93,7 @@ void ecall_test_mprotect(void)
     for (int i = 0; i < trials; i++)
     {
       	ocall_gettime(start_time);
-	NesTEE_Gateway(start, (size_t *) stack, (size_t *) hello_world_ptr, (size_t *) &secinfo_RWX, (size_t *) &secinfo_R);
+	ocall_nothing();
         ocall_gettime(end_time);
         if (end_time[1] - start_time[1] < 0 || end_time[0] - start_time[0] < 0)
 	{
