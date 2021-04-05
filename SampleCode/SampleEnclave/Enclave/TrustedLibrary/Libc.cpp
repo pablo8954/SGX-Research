@@ -75,18 +75,25 @@ extern uint8_t __ImageBase;
 
 #if 1
 
-void
+int*
 __attribute__((section(".security_monitor"), unused))
 helloWorld (void)
 {
-   // perform ocall to do something 
-   // TEST CASE: READ A FILE USING OCALLS 
-   ocall_nothing();
-   //printf("Hello World");
+   // TEST CASE: Basic Array Allocator
+   // Code for basic allocator sourced from GeekforGeeks 
+   int* ptr;
+   int n, i;
+   n = 5;
+   ptr = (int*)malloc(n*sizeof(int));
+   for (i = 0; i < n; i++)
+   {
+      ptr[i] = i + 1;
+   }
+   return ptr;
 }
 
 
-void __attribute__((section(".nestee_entry"), unused))
+int* __attribute__((section(".nestee_entry"), unused))
 NesTEE_Gateway(size_t page, size_t *stack, size_t *fun_addr, size_t *secinfo_RWX, size_t *secinfo_R)
 {
       
@@ -122,7 +129,7 @@ NesTEE_Gateway(size_t page, size_t *stack, size_t *fun_addr, size_t *secinfo_RWX
 
       
     // enter NesTEE LibOS 
-    helloWorld();
+    int* ptr = helloWorld();
          
 	    /* Lock up NesTEE pages */
 	    uint64_t perms = 0x1;
@@ -167,7 +174,8 @@ NesTEE_Gateway(size_t page, size_t *stack, size_t *fun_addr, size_t *secinfo_RWX
 		"r" ((uint64_t) fun_addr),
 		"r" ((uint64_t) secinfo_RWX),
 		"r" ((uint64_t) secinfo_R):
-		);  
+		);
+	  return ptr;  
 }
 #endif
 
@@ -202,11 +210,11 @@ void ecall_test_mprotect(void)
     
     long start_time[2], end_time[2];
     long average_execution_time = 0.0;
-
+    int* return_ptr = NULL;
     for (int i = 0; i < trials; i++)
     {
       	ocall_gettime(start_time);
-	NesTEE_Gateway(start, (size_t *) stack, (size_t *) hello_world_ptr, (size_t *) &secinfo_RWX, (size_t *) &secinfo_R);
+	return_ptr = NesTEE_Gateway(start, (size_t *) stack, (size_t *) hello_world_ptr, (size_t *) &secinfo_RWX, (size_t *) &secinfo_R);
         ocall_gettime(end_time);
         if (end_time[1] - start_time[1] < 0 || end_time[0] - start_time[0] < 0)
 	{
@@ -217,6 +225,11 @@ void ecall_test_mprotect(void)
 	execution_time[i] = ((end_time[1] - start_time[1]) * BILLION) + (end_time[0] - start_time[0]);
 	average_execution_time = average_execution_time + execution_time[i];
     }
+        printf("The elements of the array are: ");
+	for (int i= 0; i < 5; i++)
+	{
+	  printf("%d, ", return_ptr[i]);
+	}
  	//get averages
 	long execution_time_measured = average_execution_time/trials;
 	
