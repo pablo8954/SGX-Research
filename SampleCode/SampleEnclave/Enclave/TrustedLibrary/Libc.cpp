@@ -77,15 +77,18 @@ int* helloWorld (void)
 {
    // TEST CASE: Basic Array Allocator
    // Code for basic allocator sourced from GeekforGeeks 
-      int* ptr;
-      int n, i;
-      n = 5;
-      ptr = (int*)malloc(n*sizeof(int));
-      for (i = 0; i < n; i++)
-        {
-          ptr[i] = i + 1;
-        }
-      return ptr; 
+   printf("Starting Allocation |||| ");
+   int* ptr;
+   int n, i;
+   n = 5;
+   ptr = (int*)malloc(n*sizeof(int));
+   printf("Allocating Memory |||| ");
+   for (i = 0; i < n; i++)
+     {
+       ptr[i] = i + 1;
+     }
+   printf("Memory Allocated, returning back to APP |||| ");
+   return ptr; 
  
 }
 
