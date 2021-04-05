@@ -79,7 +79,10 @@ void
 __attribute__((section(".security_monitor"), unused))
 helloWorld (void)
 {
-   printf("Hello World"); 
+   // perform ocall to do something 
+   // TEST CASE: READ A FILE USING OCALLS 
+   ocall_nothing();
+   //printf("Hello World");
 }
 
 
@@ -152,7 +155,7 @@ NesTEE_Gateway(size_t page, size_t *stack, size_t *fun_addr, size_t *secinfo_RWX
    }
       
     // enter NesTEE LibOS 
-    //helloWorld();
+    helloWorld();
   
 
    __asm__ __volatile(

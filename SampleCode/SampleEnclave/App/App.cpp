@@ -31,9 +31,11 @@
 
 
 #include <stdio.h>
-#include <string.h>
+#include <iostream>
+#include <string>
 #include <assert.h>
 #include <time.h>
+#include <fstream>
 
 # include <unistd.h>
 # include <pwd.h>
@@ -207,7 +209,14 @@ int SGX_CDECL main(int argc, char *argv[])
     return 0;
 }
 
-void ocall_nothing(void) {}
+void ocall_nothing(void) 
+{
+   // peform OCALL function for benchmarking
+   std::string s = "The red dog jumps over the lazy fox";
+   std::ofstream out("sample.txt");
+   out << s;
+   out.close();
+}
 
 //retrieves time for timing mprotect & ocall functions
 void ocall_gettime(long time_array[2])

@@ -69,12 +69,15 @@ SECTIONS
   }
 
   . = ALIGN(4096);
+
+  security_monitor_begin = .;
   .security_monitor :
   {
     *(
     .security_monitor)
   }
   . = ALIGN(4096);
+  security_monitor_end = .;
 
   .text           :
   {
