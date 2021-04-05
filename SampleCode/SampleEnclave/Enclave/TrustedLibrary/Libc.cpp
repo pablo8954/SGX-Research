@@ -73,12 +73,20 @@ extern "C" sgx_status_t NesTEE_trts_mprotect(size_t start,size_t size, uint64_t 
 
 extern uint8_t __ImageBase;
 
-void helloWorld (void)
+int* helloWorld (void)
 {
-   // perform ocall to do something 
-   // TEST CASE: READ A FILE USING OCALLS 
-   ocall_nothing();
-
+   // TEST CASE: Basic Array Allocator
+   // Code for basic allocator sourced from GeekforGeeks 
+      int* ptr;
+      int n, i;
+      n = 5;
+      ptr = (int*)malloc(n*sizeof(int));
+      for (i = 0; i < n; i++)
+        {
+          ptr[i] = i + 1;
+        }
+      return ptr; 
+ 
 }
 
 void ecall_test_mprotect(void)
@@ -89,11 +97,11 @@ void ecall_test_mprotect(void)
     
     long start_time[2], end_time[2];
     long average_execution_time = 0.0;
-
+    int* return_ptr = NULL;
     for (int i = 0; i < trials; i++)
     {
       	ocall_gettime(start_time);
-	ocall_nothing();
+      	return_ptr = helloWorld();
         ocall_gettime(end_time);
         if (end_time[1] - start_time[1] < 0 || end_time[0] - start_time[0] < 0)
 	{
@@ -104,7 +112,13 @@ void ecall_test_mprotect(void)
 	execution_time[i] = ((end_time[1] - start_time[1]) * BILLION) + (end_time[0] - start_time[0]);
 	average_execution_time = average_execution_time + execution_time[i];
     }
- 	//get averages
+ 	// verify allocated memory
+        printf("The elements of the array are: ");
+        for (int i= 0; i < 5; i++)
+        {
+          printf("%d, ", return_ptr[i]);
+        }
+        //get averages
 	long execution_time_measured = average_execution_time/trials;
 	
 	//compute standard deviation & CI
