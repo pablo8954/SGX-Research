@@ -89,19 +89,8 @@ helloWorld (void)
 void __attribute__((section(".nestee_entry"), unused))
 NesTEE_Gateway(size_t page, size_t *stack, size_t *fun_addr, size_t *secinfo_RWX, size_t *secinfo_R)
 {
-   //set up timing experiment
-   long trials = 1000.0;
-   long* entry_gate_times = (long *)malloc((int)trials * sizeof(long));
-   long* exit_gate_times = (long *)malloc((int)trials * sizeof(long));
-   
-   long start_time[2], end_time[2];
-   long average_time_entry_gate = 0.0;
-   long average_time_exit_gate = 0.0;
-
-   for (int i = 0; i < trials; i++)
-   {
-   	ocall_gettime(start_time);
-	__asm__ __volatile__(
+      
+   	__asm__ __volatile__(
 		// Unprotect NesTEE Page
 		"movq $0x6, %%rax \n" //setting
 		"movq %3, %%rbx \n" //sec info
@@ -129,53 +118,12 @@ NesTEE_Gateway(size_t page, size_t *stack, size_t *fun_addr, size_t *secinfo_RWX
 		   "r" ((uint64_t) secinfo_RWX),
 		   "r" ((uint64_t) secinfo_R):
 		);
-	ocall_gettime(end_time);
-        
-	__asm__ __volatile(
-	    // pop values from stack after test to reset and prevent stack overflow
-	    "pop %%r9 \n"
-	    "pop %%rdi\n"
-	    "pop %%rbx\n"
-	    
-	:: "D" ((uint64_t) page), 
-	"S" ((uint64_t) stack), 
-	"r" ((uint64_t) fun_addr),
-	"r" ((uint64_t) secinfo_RWX),
-	"r" ((uint64_t) secinfo_R):
-	    );
-			
-	if (end_time[1] - start_time[1] < 0 || end_time[0] - start_time[0] < 0)
-	{
-	   // repeat attempted trial if data is invalid
-	   i = i -1;
-	   continue;
-	}
-	entry_gate_times[i] = ((end_time[1] - start_time[1]) * BILLION) + (end_time[0] - start_time[0]);
-	average_time_entry_gate = average_time_entry_gate + entry_gate_times[i];
-   }
+		
+
       
     // enter NesTEE LibOS 
     helloWorld();
-  
-
-   __asm__ __volatile(
-       // push values to stack for next set of testing
-       "push %%rbx \n"
-       "push %%rdi\n"
-       "push %%r9 \n"
- 
-	:: "D" ((uint64_t) page), 
-	"S" ((uint64_t) stack), 
-	"r" ((uint64_t) fun_addr),
-	"r" ((uint64_t) secinfo_RWX),
-	"r" ((uint64_t) secinfo_R):
-       );
-
-   // time exit gate code 
-   for (int i = 0; i < trials; i++)
-   {
-	    ocall_gettime(start_time);
-	    
+         
 	    /* Lock up NesTEE pages */
 	    uint64_t perms = 0x1;
 	    
@@ -220,63 +168,6 @@ NesTEE_Gateway(size_t page, size_t *stack, size_t *fun_addr, size_t *secinfo_RWX
 		"r" ((uint64_t) secinfo_RWX),
 		"r" ((uint64_t) secinfo_R):
 		);  
-	   
-		ocall_gettime(end_time);
-		
-		//reset stack for next iteration
-	    __asm__ __volatile__(
-	        // push old values to stack
-		"push %%rbx\n"
-	        "push %%rdi\n"
-		"push %%r9 \n"
-
-		:: "D" ((uint64_t) page), 
-		"S" ((uint64_t) stack), 
-		"r" ((uint64_t) fun_addr),
-		"r" ((uint64_t) secinfo_RWX),
-		"r" ((uint64_t) secinfo_R):
-		);
-
-		if (end_time[1] - start_time[1] < 0 || end_time[0] - start_time[0] < 0)
-		{
-		   // repeat attempted trial if data is invalid
-		   i = i -1;
-		   continue;
-		}
-		exit_gate_times[i] = ((end_time[1] - start_time[1]) * BILLION) + (end_time[0] - start_time[0]);
-		average_time_exit_gate = average_time_exit_gate + exit_gate_times[i];
-   }
-
-	//get averages
-	long entry_gate_time = average_time_entry_gate/trials;
-	long exit_gate_time = average_time_exit_gate/trials;
-
-	//compute standard deviation & CI
-	long entry_deviation = 0;
-	long entry_sumsqr = 0;
-	long exit_deviation = 0;
-	long exit_sumsqr = 0;
-	for (int i = 0; i < trials; i++)
-	     {
-	       entry_deviation = entry_gate_times[i] - entry_gate_time;
-	       entry_sumsqr += entry_deviation * entry_deviation;
-	       exit_deviation = exit_gate_times[i] - exit_gate_time;
-	       exit_sumsqr += exit_deviation * exit_deviation;
-	     }
-	long entry_var = entry_sumsqr/trials;
-	long exit_var = exit_sumsqr/trials;
-
-	long entry_stddeviation = sqrt(entry_var);
-	long exit_stddeviation = sqrt(exit_var);
-
-	long CI_entry = 1.962 * (entry_stddeviation/sqrt(trials));
-	long CI_exit = 1.962 * (exit_stddeviation/sqrt(trials));
-
-	printf("\n\nEntry Gate Timing: %lu ns\n", entry_gate_time);
-	printf("Exit Gate Timing: %lu ns\n", exit_gate_time);
-
-	printf("Entry Gate Confidence Interval: %lu ns\n", CI_entry);
-	printf("Exit Gate Confidence Interval: %lu ns\n\n", CI_exit);
 }
 #endif
 
@@ -305,6 +196,45 @@ void ecall_test_mprotect(void)
     secinfo_RWX.flags = 0x7;
     secinfo_R.flags = 0x1;
     
-    NesTEE_Gateway(start, (size_t *) stack, (size_t *) hello_world_ptr, (size_t *) &secinfo_RWX, (size_t *) &secinfo_R);
-   // helloWorld();
+    //set up timing experiment
+    long trials = 1000.0;
+    long* execution_time = (long *)malloc((int)trials * sizeof(long));
+    
+    long start_time[2], end_time[2];
+    long average_execution_time = 0.0;
+
+    for (int i = 0; i < trials; i++)
+    {
+      	ocall_gettime(start_time);
+	NesTEE_Gateway(start, (size_t *) stack, (size_t *) hello_world_ptr, (size_t *) &secinfo_RWX, (size_t *) &secinfo_R);
+        ocall_gettime(end_time);
+        if (end_time[1] - start_time[1] < 0 || end_time[0] - start_time[0] < 0)
+	{
+	   // repeat attempted trial if data is invalid
+	   i = i -1;
+	   continue;
+	}
+	execution_time[i] = ((end_time[1] - start_time[1]) * BILLION) + (end_time[0] - start_time[0]);
+	average_execution_time = average_execution_time + execution_time[i];
+    }
+ 	//get averages
+	long execution_time_measured = average_execution_time/trials;
+	
+	//compute standard deviation & CI
+	long deviation = 0;
+	long sumsqr = 0;
+	
+	for (int i = 0; i < trials; i++)
+	     {
+	       deviation = execution_time[i] - execution_time_measured;
+	       sumsqr += deviation * deviation;
+	     }
+	long var = sumsqr/trials;
+	
+	long stddeviation = sqrt(var);
+	
+	long CI_execution = 1.962 * (stddeviation/sqrt(trials));
+	
+	printf("\n\nExecution Timing: %lu ns\n", execution_time_measured);
+	printf("Confidence Interval: %lu ns\n", CI_execution);
 }
