@@ -75,32 +75,30 @@ extern uint8_t __ImageBase;
 
 #if 1
 
-void*
+char*
 __attribute__((section(".security_monitor"), unused))
 helloWorld (void)
 {
    // TEST CASE: Basic Array Allocator
    // Code for basic allocator sourced from GeekforGeeks 
-   char buffer [50];
-   sprintf(buffer, "Starting Allocation |||| ");
+   char* buffer =(char*)malloc(1024);
+   int cx;
+   cx = snprintf(buffer,1024, "Starting Allocation |||| ");
    int* ptr;
    int n, i;
    n = 5;
    ptr = (int*)malloc(n*sizeof(int));
-   sprintf(buffer + strlen(buffer),"Allocating Memory |||| ");
+   cx = snprintf(buffer + cx,1024-cx,"Allocating Memory |||| ");
    for (i = 0; i < n; i++)
    {
       ptr[i] = i + 1;
    }
-   sprintf(buffer + strlen(buffer),"Memory Allocated, returning back to APP |||| ");
-   void* ret_ptr = [2];
-   ret_ptr[0] = ptr;
-   ret_ptr[1] = buffer;
-   return ret_ptr;
+   snprintf(buffer + cx,1024-cx,"Memory Allocated, returning back to APP |||| ");
+   return buffer;
 }
 
 
-char* __attribute__((section(".nestee_entry"), unused))
+void __attribute__((section(".nestee_entry"), unused))
 NesTEE_Gateway(size_t page, size_t *stack, size_t *fun_addr, size_t *secinfo_RWX, size_t *secinfo_R)
 {
       
@@ -136,8 +134,8 @@ NesTEE_Gateway(size_t page, size_t *stack, size_t *fun_addr, size_t *secinfo_RWX
 
       
     // enter NesTEE LibOS 
-    char* ptr =(char*) helloWorld();
-    printf("%s",ptr[1]);
+   char* buffer = helloWorld();
+   printf("%s",buffer);
 	    
 	    //ocall and protect NesTEE pages
 	    int rc = -1;
@@ -180,7 +178,7 @@ NesTEE_Gateway(size_t page, size_t *stack, size_t *fun_addr, size_t *secinfo_RWX
 		"r" ((uint64_t) secinfo_RWX),
 		"r" ((uint64_t) secinfo_R):
 		);
-	  return ptr;  
+	 
 }
 #endif
 
@@ -215,12 +213,11 @@ void ecall_test_mprotect(void)
     
     long start_time[2], end_time[2];
     long average_execution_time = 0.0;
-    int* return_ptr = NULL;
-    char* temp = NULL;
+    
     for (int i = 0; i < trials; i++)
     {
       	ocall_gettime(start_time);
-	temp = NesTEE_Gateway(start, (size_t *) stack, (size_t *) hello_world_ptr, (size_t *) &secinfo_RWX, (size_t *) &secinfo_R);
+	NesTEE_Gateway(start, (size_t *) stack, (size_t *) hello_world_ptr, (size_t *) &secinfo_RWX, (size_t *) &secinfo_R);
         ocall_gettime(end_time);
         if (end_time[1] - start_time[1] < 0 || end_time[0] - start_time[0] < 0)
 	{
@@ -231,12 +228,7 @@ void ecall_test_mprotect(void)
 	execution_time[i] = ((end_time[1] - start_time[1]) * BILLION) + (end_time[0] - start_time[0]);
 	average_execution_time = average_execution_time + execution_time[i];
     }
-        printf("The elements of the array are: ");
-	return_ptr = temp[1]; 
-	for (int i= 0; i < 5; i++)
-	{
-	  printf("%d, ", return_ptr[i]);
-	}
+     
  	//get averages
 	long execution_time_measured = average_execution_time/trials;
 	
