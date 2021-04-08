@@ -82,15 +82,9 @@ char* helloWorld (void)
    int cx;
    cx = snprintf(buffer, val,"Starting Allocation||");
    int* ptr;
-   int n,i;
-   ptr = (int*)malloc(n*sizeof(int));
-
-   for (int i = 0; i < n; i++)
-   {
-   ptr[i] = i + 1;
-   }
+   
    snprintf(buffer + cx,val - cx,"Memory Allocated, returning back to APP||");
-   free(ptr);
+   
    return buffer; 
 }
 
