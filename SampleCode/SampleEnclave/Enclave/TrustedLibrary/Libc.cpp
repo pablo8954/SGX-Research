@@ -85,15 +85,9 @@ helloWorld (void)
    char* buffer =(char*)malloc(val);
    int cx;
    cx = snprintf(buffer, val,"Starting Allocation||");
-   int* ptr;
-   int n, i;
-   n = 5;
-   ptr = (int*)malloc(n*sizeof(int));
    
-   for (i = 0; i < n; i++)
-   {
-      ptr[i] = i + 1;
-   }
+   // allocation done here ...
+
    snprintf(buffer + cx,val - cx,"Memory Allocated, returning back to APP||");
    
    return buffer;
@@ -194,13 +188,15 @@ void ecall_test_mprotect(void)
 
     /* protect a single page, then add it to the ecall_test_mprotect */
     // allocate the extra page
-    size_t stack = (size_t) malloc(4096);
+    size_t stack; 
+    
+    stack = (size_t) malloc(4096);
     //align to page boundary & protect
     stack = (stack +  4096 - 1) & ~(4096  - 1);
     trts_mprotect(stack, 4096, 0x7);    
     trts_mprotect(start, size, 0x7);
 
-    // printf("Addr: %zx\n", start);
+    // set up page permissions args 
     sgx_arch_sec_info_t secinfo_RWX;
     sgx_arch_sec_info_t secinfo_R;
     memset(&secinfo_RWX, 0, sizeof(sgx_arch_sec_info_t));
@@ -220,7 +216,13 @@ void ecall_test_mprotect(void)
       	ocall_gettime(start_time);
 	log = NesTEE_Gateway(start, (size_t *) stack, (size_t *) hello_world_ptr, (size_t *) &secinfo_RWX, (size_t *) &secinfo_R);
         ocall_gettime(end_time);
-        if (end_time[1] - start_time[1] < 0 || end_time[0] - start_time[0] < 0)
+        
+	if (i < trials-1)
+	{
+	   free(log);
+	}
+
+	if (end_time[1] - start_time[1] < 0 || end_time[0] - start_time[0] < 0)
 	{
 	   // repeat attempted trial if data is invalid
 	   i = i -1;
