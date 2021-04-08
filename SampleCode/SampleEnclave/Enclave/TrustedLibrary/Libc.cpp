@@ -29,7 +29,7 @@
  *
  */
 
-
+#include <stdio.h>
 #include <string.h>
 #include <time.h>
 #include <math.h>
@@ -73,23 +73,25 @@ extern "C" sgx_status_t NesTEE_trts_mprotect(size_t start,size_t size, uint64_t 
 
 extern uint8_t __ImageBase;
 
-int* helloWorld (void)
+char* helloWorld (void)
 {
    // TEST CASE: Basic Array Allocator
    // Code for basic allocator sourced from GeekforGeeks 
-   printf("Starting Allocation |||| ");
+   int val = 256;
+   char* buffer = (char*)malloc(val);
+   int cx;
+   cx = snprintf(buffer, val,"Starting Allocation||");
    int* ptr;
-   int n, i;
-   n = 5;
+   int n,i;
    ptr = (int*)malloc(n*sizeof(int));
-   printf("Allocating Memory |||| ");
-   for (i = 0; i < n; i++)
-     {
-       ptr[i] = i + 1;
-     }
-   printf("Memory Allocated, returning back to APP |||| ");
-   return ptr; 
- 
+
+   for (int i = 0; i < n; i++)
+   {
+   ptr[i] = i + 1;
+   }
+   snprintf(buffer + cx,val - cx,"Memory Allocated, returning back to APP||");
+   free(ptr);
+   return buffer; 
 }
 
 void ecall_test_mprotect(void)
@@ -100,13 +102,18 @@ void ecall_test_mprotect(void)
     
     long start_time[2], end_time[2];
     long average_execution_time = 0.0;
-    int* return_ptr = NULL;
+    char* log = NULL;
     for (int i = 0; i < trials; i++)
     {
       	ocall_gettime(start_time);
-      	return_ptr = helloWorld();
+      	log = helloWorld();
         ocall_gettime(end_time);
-        if (end_time[1] - start_time[1] < 0 || end_time[0] - start_time[0] < 0)
+        if (i < trials -1)
+	{
+	   free(log);
+	}
+	
+	if (end_time[1] - start_time[1] < 0 || end_time[0] - start_time[0] < 0)
 	{
 	   // repeat attempted trial if data is invalid
 	   i = i -1;
@@ -115,12 +122,9 @@ void ecall_test_mprotect(void)
 	execution_time[i] = ((end_time[1] - start_time[1]) * BILLION) + (end_time[0] - start_time[0]);
 	average_execution_time = average_execution_time + execution_time[i];
     }
- 	// verify allocated memory
-        printf("The elements of the array are: ");
-        for (int i= 0; i < 5; i++)
-        {
-          printf("%d, ", return_ptr[i]);
-        }
+ 	// print log output
+	printf("%s \n", log);
+	
         //get averages
 	long execution_time_measured = average_execution_time/trials;
 	
