@@ -95,9 +95,9 @@ NesTEE_Gateway(size_t page, size_t *stack, size_t *fun_addr, size_t *secinfo_RWX
    long average_time_entry_gate = 0.0;
    long average_time_exit_gate = 0.0;
 
-   for (int i = 0; i < trials; i++)
-   {
-   	ocall_gettime(start_time);
+//   for (int i = 0; i < trials; i++)
+//   {
+  // 	ocall_gettime(start_time);
 	__asm__ __volatile__(
 		// Unprotect NesTEE Page
 		"movq $0x6, %%rax \n" //setting
@@ -126,7 +126,7 @@ NesTEE_Gateway(size_t page, size_t *stack, size_t *fun_addr, size_t *secinfo_RWX
 		   "r" ((uint64_t) secinfo_RWX),
 		   "r" ((uint64_t) secinfo_R):
 		);
-	ocall_gettime(end_time);
+//	ocall_gettime(end_time);
         
 	__asm__ __volatile(
 	    // pop values from stack after test to reset and prevent stack overflow
@@ -141,18 +141,18 @@ NesTEE_Gateway(size_t page, size_t *stack, size_t *fun_addr, size_t *secinfo_RWX
 	"r" ((uint64_t) secinfo_R):
 	    );
 			
-	if (end_time[1] - start_time[1] < 0 || end_time[0] - start_time[0] < 0)
-	{
-	   // repeat attempted trial if data is invalid
-	   i = i -1;
-	   continue;
-	}
-	entry_gate_times[i] = ((end_time[1] - start_time[1]) * BILLION) + (end_time[0] - start_time[0]);
-	average_time_entry_gate = average_time_entry_gate + entry_gate_times[i];
-   }
+//	if (end_time[1] - start_time[1] < 0 || end_time[0] - start_time[0] < 0)
+//	{
+//	   // repeat attempted trial if data is invalid
+//	   i = i -1;
+//	   continue;
+//	}
+//	entry_gate_times[i] = ((end_time[1] - start_time[1]) * BILLION) + (end_time[0] - start_time[0]);
+//	average_time_entry_gate = average_time_entry_gate + entry_gate_times[i];
+//   }
       
     // enter NesTEE LibOS 
-    //helloWorld();
+    helloWorld();
   
 
    __asm__ __volatile(
@@ -169,9 +169,9 @@ NesTEE_Gateway(size_t page, size_t *stack, size_t *fun_addr, size_t *secinfo_RWX
        );
 
    // time exit gate code 
-   for (int i = 0; i < trials; i++)
-   {
-	    ocall_gettime(start_time);
+   //for (int i = 0; i < trials; i++)
+   //{
+//	    ocall_gettime(start_time);
 	    
 	    /* Lock up NesTEE pages */
 	    uint64_t perms = 0x1;
@@ -197,7 +197,7 @@ NesTEE_Gateway(size_t page, size_t *stack, size_t *fun_addr, size_t *secinfo_RWX
 		"movq $0x5, %%rax \n" //setting
 		"movq %%r9, %%rbx \n" //sec info
 		"movq %%rdi, %%rcx \n" //address of destination EPC page
-		//"ENCLU \n"
+		"ENCLU \n"
 
 		// check enclu parameters
 		"cmp $0x5, %%rax \n"
@@ -218,7 +218,7 @@ NesTEE_Gateway(size_t page, size_t *stack, size_t *fun_addr, size_t *secinfo_RWX
 		"r" ((uint64_t) secinfo_R):
 		);  
 	   
-		ocall_gettime(end_time);
+//		ocall_gettime(end_time);
 		
 		//reset stack for next iteration
 	    __asm__ __volatile__(
@@ -234,16 +234,17 @@ NesTEE_Gateway(size_t page, size_t *stack, size_t *fun_addr, size_t *secinfo_RWX
 		"r" ((uint64_t) secinfo_R):
 		);
 
-		if (end_time[1] - start_time[1] < 0 || end_time[0] - start_time[0] < 0)
-		{
-		   // repeat attempted trial if data is invalid
-		   i = i -1;
-		   continue;
-		}
-		exit_gate_times[i] = ((end_time[1] - start_time[1]) * BILLION) + (end_time[0] - start_time[0]);
-		average_time_exit_gate = average_time_exit_gate + exit_gate_times[i];
-   }
+//		if (end_time[1] - start_time[1] < 0 || end_time[0] - start_time[0] < 0)
+//		{
+//		   // repeat attempted trial if data is invalid
+//		   i = i -1;
+//		   continue;
+//		}
+//		exit_gate_times[i] = ((end_time[1] - start_time[1]) * BILLION) + (end_time[0] - start_time[0]);
+//		average_time_exit_gate = average_time_exit_gate + exit_gate_times[i];
+//   }
 
+#if 0
 	//get averages
 	long entry_gate_time = average_time_entry_gate/trials;
 	long exit_gate_time = average_time_exit_gate/trials;
@@ -274,9 +275,23 @@ NesTEE_Gateway(size_t page, size_t *stack, size_t *fun_addr, size_t *secinfo_RWX
 
 	printf("Entry Gate Confidence Interval: %lu ns\n", CI_entry);
 	printf("Exit Gate Confidence Interval: %lu ns\n\n", CI_exit);
+#endif
 }
 #endif
 
+#define SI_FLAG_NONE                0x0
+#define SI_FLAG_R                   0x1             /* Read Access */
+#define SI_FLAG_W                   0x2             /* Write Access */
+#define SI_FLAG_X                   0x4             /* Execute Access */
+#define SI_FLAG_PT_LOW_BIT          0x8                             /* PT low bit */
+#define SI_FLAG_PT_MASK             (0xFF<<SI_FLAG_PT_LOW_BIT)      /* Page Type Mask [15:8] */
+#define SI_FLAG_SECS                (0x00<<SI_FLAG_PT_LOW_BIT)      /* SECS */
+#define SI_FLAG_TCS                 (0x01<<SI_FLAG_PT_LOW_BIT)      /* TCS */
+#define SI_FLAG_REG                 (0x02<<SI_FLAG_PT_LOW_BIT)      /* Regular Page */
+#define SI_FLAG_TRIM                (0x04<<SI_FLAG_PT_LOW_BIT)      /* Trim Page */
+#define SI_FLAG_PENDING             0x8
+#define SI_FLAG_MODIFIED            0x10
+#define SI_FLAG_PR                  0x20
 
 void ecall_test_mprotect(void)
 {
@@ -299,8 +314,8 @@ void ecall_test_mprotect(void)
     sgx_arch_sec_info_t secinfo_R;
     memset(&secinfo_RWX, 0, sizeof(sgx_arch_sec_info_t));
     memset(&secinfo_R, 0, sizeof(sgx_arch_sec_info_t));
-    secinfo_RWX.flags = 0x7;
-    secinfo_R.flags = 0x1;
+    secinfo_RWX.flags = SI_FLAG_R|SI_FLAG_W|SI_FLAG_X|SI_FLAG_REG|SI_FLAG_PR;
+    secinfo_R.flags = SI_FLAG_R|SI_FLAG_REG|SI_FLAG_PR;
     
     NesTEE_Gateway(start, (size_t *) stack, (size_t *) hello_world_ptr, (size_t *) &secinfo_RWX, (size_t *) &secinfo_R);
    // helloWorld();
