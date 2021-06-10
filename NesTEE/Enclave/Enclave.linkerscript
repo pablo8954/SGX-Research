@@ -51,28 +51,25 @@ SECTIONS
     KEEP (*(SORT_NONE(.init)))
   }
   .plt            : { *(.plt) *(.iplt) }
-.plt.got        : { *(.plt.got) }
-.plt.sec        : { *(.plt.sec) }
+  .plt.got        : { *(.plt.got) }
+  .plt.sec        : { *(.plt.sec) }
 
   . = ALIGN(4096);
   .nestee_entry :
   {
-    *(
-    .nestee_entry)
+    *(.nestee_entry)
   }
 
   . = ALIGN(4096);
   .nestee_exit :
   {
-    *(
-    .nestee_exit)
+    *(.nestee_exit)
   }
 
   . = ALIGN(4096);
   .security_monitor :
   {
-    *(
-    .security_monitor)
+    *(.security_monitor)
   }
   . = ALIGN(4096);
 
@@ -86,9 +83,6 @@ SECTIONS
     /* .gnu.warning sections are handled specially by elf32.em.  */
     *(.gnu.warning)
   }
-
-
-
 
   .fini           :
   {

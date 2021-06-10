@@ -84,6 +84,6 @@ void ecall_map(void)
     assert(m['d'] == 4);
 
     assert(m.find('e') == m.end());
-    
+
     return;
 }

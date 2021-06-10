@@ -178,9 +178,6 @@ void ocall_print_string(const char *str)
 }
 
 
-//[ ! -d /opt/intel/sgxsdk ] || /opt/intel/sgxsdk/uninstall.sh
-//[ ! -d /opt/intel/sgxpsw ] || /opt/intel/sgxpsw/uninstall.sh
-
 /* Application entry */
 int SGX_CDECL main(int argc, char *argv[])
 {
@@ -192,16 +189,17 @@ int SGX_CDECL main(int argc, char *argv[])
     if(initialize_enclave() < 0){
         printf("Enter a character before exit ...\n");
         getchar();
-        return -1; 
+        return -1;
     }
 
-    //call enclave function to time mprotect & ocall overhead
-    ecall_test_mprotect(global_eid);
+    /* Call to NesTEE entry */
+    ecall_start_NesTEE(global_eid);
 
     /* Destroy the enclave */
     sgx_destroy_enclave(global_eid);
-    
+
     printf("Info: SampleEnclave successfully returned.\n");
+
     printf("Enter a character before exit ...\n");
     getchar();
     return 0;
