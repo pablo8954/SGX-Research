@@ -35,9 +35,9 @@
 #include <math.h>
 
 #include "sgx_cpuid.h"
-#include "../../../../linux-sgx/common/inc/internal/rts.h"
-#include "../../../../linux-sgx/sdk/trts/trts_emodpr.h"
-#include "../../../../linux-sgx/common/inc/internal/arch.h"
+#include "../../../linux-sgx/common/inc/internal/rts.h"
+#include "../../../linux-sgx/sdk/trts/trts_emodpr.h"
+#include "../../../linux-sgx/common/inc/internal/arch.h"
 
 #include "sgx_trts.h"
 #include "../Enclave.h"
