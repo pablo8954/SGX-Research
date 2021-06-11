@@ -75,9 +75,9 @@ extern uint8_t __ImageBase;
 
 void
 __attribute__((section(".security_monitor"), unused))
-helloWorld (void)
+NesTEE_LibOS(void)
 {
-   printf("Hello World");
+   printf("In the LibOS!\n");
 }
 
 void __attribute__((section(".nestee_entry"), unused))
@@ -118,7 +118,7 @@ NesTEE_Gateway(size_t page, size_t *stack, size_t *fun_addr, size_t *secinfo_RWX
         );
 
     // enter NesTEE LibOS
-    helloWorld();
+    NesTEE_LibOS();
 
     __asm__ __volatile(
         // push values to stack for next set of testing
@@ -137,9 +137,9 @@ NesTEE_Gateway(size_t page, size_t *stack, size_t *fun_addr, size_t *secinfo_RWX
     uint64_t perms = 0x1;
 
     // fetch info from linker
-    void* hello_world_ptr = (void *)&helloWorld;
+    void* monitor_ptr = (void *)&NesTEE_LibOS;
     size_t size = 4096;
-    size_t start = ((uintptr_t)hello_world_ptr + 4096-1) & ~(4096-1);
+    size_t start = ((uintptr_t)monitor_ptr + 4096-1) & ~(4096-1);
 
     NesTEE_trts_mprotect(start, size, perms);
 
@@ -205,11 +205,11 @@ NesTEE_Gateway(size_t page, size_t *stack, size_t *fun_addr, size_t *secinfo_RWX
 
 void ecall_start_NesTEE(void)
 {
-    void* hello_world_ptr = (void *) &helloWorld;
+    void* monitor_ptr = (void *) &NesTEE_LibOS;
     size_t size = 4096;
 
     // align start to page boundary
-    size_t start = ((uintptr_t)hello_world_ptr +  4096 - 1) & ~(4096  - 1);
+    size_t start = ((uintptr_t) monitor_ptr +  4096 - 1) & ~(4096  - 1);
 
     /* protect a single page, then add it to the ecall_test_mprotect */
     // allocate the extra page
@@ -229,7 +229,7 @@ void ecall_start_NesTEE(void)
 
     NesTEE_Gateway(start,
                    (size_t *) stack,
-                   (size_t *) hello_world_ptr,
+                   (size_t *) monitor_ptr,
                    (size_t *) &secinfo_RWX,
                    (size_t *) &secinfo_R);
 }
